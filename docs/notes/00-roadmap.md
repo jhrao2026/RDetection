@@ -10,15 +10,21 @@
 
 ## 阶段
 
-### Stage 0：环境 + 跑通官方（约 1 周）
-- 按 README 安装；跑通 `configs/faster_rcnn/faster-rcnn_r50_fpn_1x_coco.py` 的推理和 1 个 epoch 训练。
-- 会用 `tools/train.py`、`tools/dist_train.sh`、`tools/misc/browse_dataset.py`、`tools/analysis_tools/analyze_logs.py`。
+### Stage 0：环境 + 跑通官方 + tools 练习（约 1 周）
+- 按 README 安装；先用 **mmdet 自带** 的 tools 跑通 `configs/faster_rcnn/faster-rcnn_r50_fpn_1x_coco.py` 的推理和 1 个 epoch 训练。
+- 再按 TODO 完成本仓库的练习版，用同样的命令跑通即为完成：
+  - [ ] `tools/train.py`
+  - [ ] `tools/dist_train.sh`
+  - [ ] `tools/test.py`
+  - [ ] `tools/dist_test.sh`
+  - [ ] `tools/misc/browse_dataset.py`
 - 作业：画出 `runner.train()` 的调用链：Config → Runner → build model / dataloader → train loop → Hooks。
 
 ### Stage 1：手写 mini_mm（约 1–2 周）
-- [x] `mini_mm/registry.py`：仿 `mmengine/registry/registry.py`
-- [ ] `mini_mm/config.py`：支持 `_base_` 继承和字典合并（仿 `mmengine/config/config.py`）
-- [ ] `mini_mm/runner.py` + `hooks.py`：最小训练循环 + LoggerHook / CheckpointHook
+- [x] `mini_mm/registry.py`：仿 `mmengine/registry/registry.py`（已完成的示范，先读懂它）
+- [ ] `mini_mm/config.py`：练习 1–5，`_base_` 继承与字典合并（`pytest tests/test_mini_mm_config.py`）
+- [ ] `mini_mm/hooks.py`：练习 6–7，LoggerHook / CheckpointHook
+- [ ] `mini_mm/runner.py`：练习 8–12，parse_losses / Hook 排序 / 训练循环 / from_cfg（`pytest tests/test_mini_mm_runner.py`）
 - [ ] 用 mini_mm 训练 CIFAR-10 小分类网，顺便补齐 Dataset/DataLoader、autograd、优化器、AMP、DDP
 - 思考题：
   - 为什么用 Registry 而不是直接 import？
