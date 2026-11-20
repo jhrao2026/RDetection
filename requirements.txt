@@ -1,0 +1,11 @@
+# 按 CUDA 版本先安装 PyTorch：https://pytorch.org/get-started/locally/
+# mmcv 2.1.x 需与 torch / CUDA 版本匹配，推荐用 mim 安装：
+#   pip install -U openmim && mim install "mmengine>=0.10.0,<1.0" "mmcv>=2.0.0,<2.2.0" "mmdet>=3.3.0,<3.4.0"
+torch>=2.0,<2.2
+torchvision
+mmengine>=0.10.0,<1.0
+mmcv>=2.0.0,<2.2.0
+mmdet>=3.3.0,<3.4.0
+pycocotools
+scipy
+pytest
