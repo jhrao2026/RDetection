@@ -229,3 +229,13 @@ def test_sampler_add_gt():
     assert sorted(gt_rows.tolist()) == [0, 1, 2]
     assert torch.equal(res.pos_priors[res.pos_is_gt], res.pos_gt_bboxes[res.pos_is_gt])
     assert len(assign.gt_inds) == 33   # add_gt_ 已经修改了 assign_result
+
+
+def test_valid_flags_vs_mmdet():
+    pytest.importorskip('mmdet.models')
+    from mmdet.models.task_modules.prior_generators import AnchorGenerator
+    ref = AnchorGenerator(strides=[4, 8, 16, 32, 64], ratios=[0.5, 1.0, 2.0], scales=[8])
+    sizes = [(20, 25), (10, 13), (5, 7), (3, 4), (2, 2)]
+    for a, b in zip(_rpn_anchor_generator().valid_flags(sizes, (64, 96)),
+                    ref.valid_flags(sizes, (64, 96), device='cpu')):
+        assert torch.equal(a, b)

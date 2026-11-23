@@ -32,6 +32,8 @@
 
 from typing import List, Sequence, Tuple
 
+import math
+
 import torch
 
 from rdet.registry import TASK_UTILS
@@ -117,3 +119,26 @@ class RAnchorGenerator:
         assert len(featmap_sizes) == self.num_levels
         # TODO(3) 对每层调用 single_level_grid_priors
         raise NotImplementedError('RAnchorGenerator.grid_priors')
+
+    def valid_flags(self, featmap_sizes: List[Tuple[int, int]], pad_shape: Tuple[int, int],
+                    device='cpu') -> List[torch.Tensor]:
+        """（已完成，2.3 RPN 会用到）标记哪些 anchor 落在 "真实图像" 范围内。
+
+        一个 batch 里的图片大小不同，DetDataPreprocessor 会把它们 pad 到同样大小。
+        pad 出来的区域全是 0，在那里放的 anchor 没有意义，训练时要排除。
+        pad_shape 是这张图自己（pad 到 32 的倍数后）的 (h, w)，不是整个 batch 的大小。
+
+        返回 list，第 l 项是 [H_l * W_l * A] 的 bool，排列顺序与 grid_priors 一致。
+        """
+        flags = []
+        for i, (feat_h, feat_w) in enumerate(featmap_sizes):
+            stride_w, stride_h = self.strides[i]
+            valid_h = min(int(math.ceil(pad_shape[0] / stride_h)), feat_h)
+            valid_w = min(int(math.ceil(pad_shape[1] / stride_w)), feat_w)
+            valid_y = torch.zeros(feat_h, dtype=torch.bool, device=device)
+            valid_x = torch.zeros(feat_w, dtype=torch.bool, device=device)
+            valid_y[:valid_h] = True
+            valid_x[:valid_w] = True
+            valid = (valid_y[:, None] & valid_x[None, :]).view(-1)
+            flags.append(valid[:, None].expand(-1, self.num_base_anchors[i]).reshape(-1))
+        return flags

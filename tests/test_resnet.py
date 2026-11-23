@@ -62,3 +62,17 @@ def test_frozen_stages_and_norm_eval():
 
 def test_registered():
     assert isinstance(MODELS.build(dict(type='RResNet', depth=50)), RResNet)
+
+
+def test_init_weights_from_local_checkpoint(tmp_path):
+    tv = torchvision.models.resnet50()
+    path = tmp_path / 'r50.pth'
+    torch.save({'state_dict': tv.state_dict()}, path)       # 模拟 mmdet 风格的 ckpt（外面包了一层）
+    model = RResNet(depth=50, init_cfg=dict(type='Pretrained', checkpoint=str(path)))
+    model.init_weights()
+    assert torch.equal(model.layer3[2].conv2.weight, tv.layer3[2].conv2.weight)
+
+    untouched = RResNet(depth=50)
+    before = untouched.conv1.weight.clone()
+    untouched.init_weights()                                # init_cfg=None：什么都不做
+    assert torch.equal(untouched.conv1.weight, before)

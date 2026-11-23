@@ -94,6 +94,16 @@ class RFPN(nn.Module):
         #         注意：额外卷积是 **接在 fpn_convs 后面** 的，不是单独的 ModuleList（为了对齐 mmdet 权重）
         raise NotImplementedError('RFPN.__init__')
 
+    def init_weights(self) -> None:
+        """练习 4：与 mmdet 一致，所有卷积用 xavier_uniform 初始化，bias 置 0。
+
+        提示：遍历 self.modules()，对 nn.Conv2d 调用 nn.init.xavier_uniform_(m.weight) 和
+        nn.init.constant_(m.bias, 0)。
+        思考：PyTorch 的 Conv2d 默认是什么初始化？为什么检测器的新层不直接用默认值？
+        """
+        # TODO(4)
+        raise NotImplementedError('RFPN.init_weights')
+
     def forward(self, inputs: Tuple[torch.Tensor, ...]) -> Tuple[torch.Tensor, ...]:
         """练习 3。
 

@@ -65,3 +65,15 @@ def test_fpn_vs_mmdet(kwargs):
     with torch.no_grad():
         for a, b in zip(mine(feats), ref(feats)):
             assert torch.allclose(a, b, atol=1e-5)
+
+
+def test_init_weights():
+    fpn = RFPN(IN_CHANNELS, 256, num_outs=5)
+    for m in fpn.modules():
+        if isinstance(m, torch.nn.Conv2d):
+            torch.nn.init.constant_(m.bias, 1.)
+    fpn.init_weights()
+    convs = [m for m in fpn.modules() if isinstance(m, torch.nn.Conv2d)]
+    assert all(torch.all(c.bias == 0) for c in convs)
+    bound = (6 / (256 * 9 + 256 * 9)) ** 0.5                 # xavier_uniform 对 3x3 conv 的上界
+    assert fpn.fpn_convs[0].conv.weight.abs().max() <= bound

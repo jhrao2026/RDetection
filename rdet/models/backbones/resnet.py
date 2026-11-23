@@ -75,8 +75,9 @@ class RResNet(nn.Module):
         out_indices: 输出哪些 stage（0 = layer1 ... 3 = layer4）
         frozen_stages: -1 不冻结；0 冻结 stem（conv1 + bn1）；k 冻结 stem 和 layer1..layerk
         norm_eval: 训练时是否让所有 BN 保持 eval
-        init_cfg: 占位参数，让 mmdet 配置里的 init_cfg=dict(type='Pretrained', ...) 不报错；
-                  预训练权重的加载在 2.5 detector 练习里处理
+        init_cfg: dict(type='Pretrained', checkpoint=...)，checkpoint 可以是
+                  'torchvision://resnet50'（下载 torchvision 的 ImageNet 权重）或本地 .pth 路径；
+                  None 表示随机初始化。真正加载发生在 init_weights()（练习 7）
     """
 
     arch_settings = {50: (3, 4, 6, 3), 101: (3, 4, 23, 3)}
@@ -129,6 +130,31 @@ class RResNet(nn.Module):
         """练习 5：stem → layer1..4，把 out_indices 里的 stage 输出收集成 tuple 返回。"""
         # TODO(5)
         raise NotImplementedError('RResNet.forward')
+
+    def init_weights(self) -> None:
+        """练习 7：加载 ImageNet 预训练权重。
+
+        mmengine 的 Runner 在训练开始前会调用 model.init_weights()，mmdet 的 BaseModule 会递归
+        调用每个子模块的 init_weights —— 所以只要实现这个方法，配置里的 init_cfg 就会生效。
+        （测试 / 推理时不会调用它：那时权重来自 load_from 的检查点）
+
+        步骤：
+            if self.init_cfg is None or self.init_cfg.get('type') != 'Pretrained': return
+            ckpt = self.init_cfg['checkpoint']
+            if ckpt.startswith('torchvision://'):
+                import torchvision
+                url = torchvision.models.ResNet50_Weights.IMAGENET1K_V1.url   # 只考虑 resnet50
+                state_dict = torch.hub.load_state_dict_from_url(url, map_location='cpu')
+            else:
+                state_dict = torch.load(ckpt, map_location='cpu')
+                state_dict = state_dict.get('state_dict', state_dict)      # mmdet 的 ckpt 外面还包了一层
+            去掉 'fc.' 开头的 key，然后 self.load_state_dict(state_dict, strict=True)
+
+        思考：为什么 strict=True？如果某个 key 拼错了，strict=False 会默默跳过，你会得到一个
+              "看起来在训练、其实 backbone 是随机初始化" 的模型 —— 这类 bug 极难发现。
+        """
+        # TODO(7)
+        raise NotImplementedError('RResNet.init_weights')
 
     def train(self, mode: bool = True):
         """练习 6：重写 train()。

@@ -55,23 +55,31 @@
 - [ ] `rdet/models/task_modules/samplers/random_sampler.py`：`RRandomSampler`
 
 **2.2 Backbone & Neck**（`pytest tests/test_resnet.py tests/test_fpn.py`）
-- [ ] `rdet/models/backbones/resnet.py`：`RResNet`（和 torchvision resnet50 输出一致）
+- [ ] `rdet/models/backbones/resnet.py`：`RResNet`（和 torchvision resnet50 输出一致；练习 7 加载预训练权重）
 - [ ] `rdet/models/necks/fpn.py`：`RFPN`（和 torchvision / mmdet FPN 输出一致）
 
-**2.3 RPN Head** —— 待发布
-- [ ] `rdet/models/dense_heads/rpn_head.py`：forward / loss / 生成 proposals
+**2.3 RPN Head**（`pytest tests/test_rpn_head.py`）
+- [ ] `rdet/models/dense_heads/rpn_head.py`：`RRPNHead` —— forward / 训练目标 / loss / 生成 proposals
 
-**2.4 RoI Head** —— 待发布
-- [ ] RoI Extractor（按面积把 RoI 分配到 FPN 层 + RoIAlign）
-- [ ] BBox Head（Shared2FC + 分类 / 回归分支）
-- [ ] StandardRoIHead（串起 assigner / sampler / extractor / bbox head）
+**2.4 RoI Head**（`pytest tests/test_roi_head.py`）
+- [ ] `rdet/models/roi_heads/roi_extractor.py`：`RSingleRoIExtractor`（按面积把 RoI 分配到 FPN 层 + RoIAlign）
+- [ ] `rdet/models/roi_heads/bbox_head.py`：`RShared2FCBBoxHead`（Shared2FC + 分类 / 回归 + multiclass NMS）
+- [ ] `rdet/models/roi_heads/standard_roi_head.py`：`bbox2roi` + `RStandardRoIHead`
 
-**2.5 Detector + 配置**（最终验收）—— 待发布
-- [ ] `rdet/models/detectors/faster_rcnn.py`
-- [ ] `configs/faster_rcnn/rfaster-rcnn_r50_fpn_1x_coco.py`：加载官方权重 mAP = 37.4；多卡从头训练 1x，差距 ≤ 0.3
+**2.5 Detector + 配置**（`pytest tests/test_faster_rcnn.py`，需要 mmdet）
+- [ ] `rdet/models/detectors/faster_rcnn.py`：`RFasterRCNN`
+- [ ] 测试全部通过后，在服务器上跑最终验收：
+  - [ ] `python tools/test.py configs/faster_rcnn/rfaster-rcnn_r50_fpn_1x_coco.py <官方权重>`：bbox mAP = 37.4
+  - [ ] `bash tools/dist_train.sh configs/faster_rcnn/rfaster-rcnn_r50_fpn_1x_coco.py 8`：mAP 与官方差距 ≤ 0.3
 
-**2.6 RetinaNet（短练习，衔接 YOLO）** —— 待发布
-- [ ] Focal Loss + RetinaHead，复用 2.1 / 2.2 的组件，对比 one-stage 与 two-stage
+**2.6 RetinaNet（衔接 YOLO）**（`pytest tests/test_retinanet.py`）
+- [ ] `rdet/models/losses/focal_loss.py`：`sigmoid_focal_loss`
+- [ ] `rdet/models/dense_heads/retina_head.py`：`RRetinaHead`（建议复制自己的 RPN 代码再改）
+- [ ] `rdet/models/detectors/single_stage.py`：`RSingleStageDetector`
+- [ ] 服务器验收：`configs/retinanet/rretinanet_r50_fpn_1x_coco.py` 加载官方权重 mAP = 36.5
+
+> 小技巧：从头训练时，mmengine 会在日志里逐个参数打印 "Initialized by user-defined `init_weights` in XXX"，
+> 可以用它确认自己写的 init_weights 真的生效了。
 
 思考题：
 - 为什么 bbox 回归预测 delta，而不是绝对坐标？

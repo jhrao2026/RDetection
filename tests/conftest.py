@@ -14,7 +14,7 @@ import pytest
 def pytest_runtest_makereport(item, call):
     outcome = yield
     rep = outcome.get_result()
-    if (rep.when == 'call' and call.excinfo is not None
+    if (rep.when in ('setup', 'call') and call.excinfo is not None
             and call.excinfo.errisinstance(NotImplementedError)):
         rep.outcome = 'skipped'
         rep.longrepr = (str(item.path), item.location[1] or 0,

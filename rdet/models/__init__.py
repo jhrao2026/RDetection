@@ -1,1 +1,2 @@
-from . import backbones, layers, necks, task_modules  # noqa: F401
+from . import (backbones, dense_heads, detectors, layers, losses, necks,  # noqa: F401
+               roi_heads, task_modules)
