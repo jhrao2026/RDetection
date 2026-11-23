@@ -55,7 +55,7 @@ class ConvModule(nn.Module):
 
 
 @MODELS.register_module()
-class RFPN(nn.Module):
+class FPN(nn.Module):
     """Args:
         in_channels: backbone 各层通道，例如 [256, 512, 1024, 2048]
         out_channels: 输出通道，256
@@ -92,7 +92,7 @@ class RFPN(nn.Module):
         #                     否则 out_channels
         #             fpn_convs 追加 ConvModule(in_ch, out_channels, 3, stride=2, padding=1)
         #         注意：额外卷积是 **接在 fpn_convs 后面** 的，不是单独的 ModuleList（为了对齐 mmdet 权重）
-        raise NotImplementedError('RFPN.__init__')
+        raise NotImplementedError('FPN.__init__')
 
     def init_weights(self) -> None:
         """练习 4：与 mmdet 一致，所有卷积用 xavier_uniform 初始化，bias 置 0。
@@ -102,7 +102,7 @@ class RFPN(nn.Module):
         思考：PyTorch 的 Conv2d 默认是什么初始化？为什么检测器的新层不直接用默认值？
         """
         # TODO(4)
-        raise NotImplementedError('RFPN.init_weights')
+        raise NotImplementedError('FPN.init_weights')
 
     def forward(self, inputs: Tuple[torch.Tensor, ...]) -> Tuple[torch.Tensor, ...]:
         """练习 3。
@@ -134,7 +134,7 @@ class RFPN(nn.Module):
         5. return tuple(outs)
         """
         # TODO(3)
-        raise NotImplementedError('RFPN.forward')
+        raise NotImplementedError('FPN.forward')
 
 
 _ = (F, List)  # 写完后删掉这一行

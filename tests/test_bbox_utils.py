@@ -11,9 +11,9 @@ torch = pytest.importorskip('torch')
 torchvision = pytest.importorskip('torchvision')
 
 from rdet.models.layers import batched_nms, nms  # noqa: E402
-from rdet.models.task_modules import (AssignResult, RAnchorGenerator,  # noqa: E402
-                                      RDeltaXYWHBBoxCoder, RMaxIoUAssigner,
-                                      RRandomSampler)
+from rdet.models.task_modules import (AssignResult, AnchorGenerator,  # noqa: E402
+                                      DeltaXYWHBBoxCoder, MaxIoUAssigner,
+                                      RandomSampler)
 from rdet.structures import bbox_overlaps  # noqa: E402
 
 
@@ -69,13 +69,13 @@ def test_batched_nms_matches_torchvision():
 
 # =============================================================== anchor generator
 def _rpn_anchor_generator():
-    return RAnchorGenerator(strides=[4, 8, 16, 32, 64], ratios=[0.5, 1.0, 2.0], scales=[8])
+    return AnchorGenerator(strides=[4, 8, 16, 32, 64], ratios=[0.5, 1.0, 2.0], scales=[8])
 
 
 def test_base_anchors_hand_example():
-    gen = RAnchorGenerator(strides=[16], ratios=[1.], scales=[8.])
+    gen = AnchorGenerator(strides=[16], ratios=[1.], scales=[8.])
     assert torch.allclose(gen.base_anchors[0], torch.tensor([[-64., -64., 64., 64.]]))
-    gen = RAnchorGenerator(strides=[16], ratios=[0.5, 1., 2.], scales=[1., 2.])
+    gen = AnchorGenerator(strides=[16], ratios=[0.5, 1., 2.], scales=[1., 2.])
     base = gen.base_anchors[0]
     assert base.shape == (6, 4)
     w, h = base[:, 2] - base[:, 0], base[:, 3] - base[:, 1]
@@ -97,8 +97,8 @@ def test_grid_priors_shape_and_order():
 
 def test_anchor_generator_vs_mmdet():
     pytest.importorskip('mmdet.models')
-    from mmdet.models.task_modules.prior_generators import AnchorGenerator
-    ref = AnchorGenerator(strides=[4, 8, 16, 32, 64], ratios=[0.5, 1.0, 2.0], scales=[8])
+    from mmdet.models.task_modules.prior_generators import AnchorGenerator as MMDetAnchorGenerator
+    ref = MMDetAnchorGenerator(strides=[4, 8, 16, 32, 64], ratios=[0.5, 1.0, 2.0], scales=[8])
     sizes = [(20, 25), (10, 13), (5, 7), (3, 4), (2, 2)]
     for a, b in zip(_rpn_anchor_generator().grid_priors(sizes), ref.grid_priors(sizes, device='cpu')):
         assert torch.allclose(a, b)
@@ -106,7 +106,7 @@ def test_anchor_generator_vs_mmdet():
 
 # =============================================================== bbox coder
 def test_coder_known_values():
-    coder = RDeltaXYWHBBoxCoder()
+    coder = DeltaXYWHBBoxCoder()
     anchor = torch.tensor([[0., 0., 10., 10.]])
     gt = torch.tensor([[5., 0., 15., 20.]])         # 中心右移半个宽度，高度变为 2 倍
     d = coder.encode(anchor, gt)
@@ -114,14 +114,14 @@ def test_coder_known_values():
 
 
 def test_coder_roundtrip_with_stds():
-    coder = RDeltaXYWHBBoxCoder(target_stds=(0.1, 0.1, 0.2, 0.2))
+    coder = DeltaXYWHBBoxCoder(target_stds=(0.1, 0.1, 0.2, 0.2))
     anchors, gts = random_boxes(50, seed=9), random_boxes(50, seed=10)
     deltas = coder.encode(anchors, gts)
     assert torch.allclose(coder.decode(anchors, deltas), gts, atol=1e-3)
 
 
 def test_coder_clip_and_ratio_clamp():
-    coder = RDeltaXYWHBBoxCoder()
+    coder = DeltaXYWHBBoxCoder()
     anchor = torch.tensor([[40., 10., 60., 30.]])
     out = coder.decode(anchor, torch.tensor([[0., 0., 50., 50.]]), max_shape=(48, 64))  # (h, w)
     assert out[0, 0] == 0 and out[0, 1] == 0 and out[0, 2] == 64 and out[0, 3] == 48
@@ -132,9 +132,9 @@ def test_coder_clip_and_ratio_clamp():
 
 def test_coder_vs_mmdet():
     pytest.importorskip('mmdet.models')
-    from mmdet.models.task_modules.coders import DeltaXYWHBBoxCoder
+    from mmdet.models.task_modules.coders import DeltaXYWHBBoxCoder as MMDetDeltaXYWHBBoxCoder
     kw = dict(target_means=(0., 0., 0., 0.), target_stds=(0.1, 0.1, 0.2, 0.2))
-    mine, ref = RDeltaXYWHBBoxCoder(**kw), DeltaXYWHBBoxCoder(**kw)
+    mine, ref = DeltaXYWHBBoxCoder(**kw), MMDetDeltaXYWHBBoxCoder(**kw)
     anchors, gts = random_boxes(50, seed=11), random_boxes(50, seed=12)
     assert torch.allclose(mine.encode(anchors, gts), ref.encode(anchors, gts), atol=1e-5)
     deltas = torch.randn(50, 4, generator=torch.Generator().manual_seed(13))
@@ -154,7 +154,7 @@ PRIORS = torch.tensor([
 
 
 def test_assigner_basic():
-    assigner = RMaxIoUAssigner(pos_iou_thr=0.7, neg_iou_thr=0.3, min_pos_iou=0.3)
+    assigner = MaxIoUAssigner(pos_iou_thr=0.7, neg_iou_thr=0.3, min_pos_iou=0.3)
     res = assigner.assign(PRIORS, GT, GT_LABELS)
     assert isinstance(res, AssignResult) and res.num_gts == 2
     assert res.gt_inds.tolist() == [1, -1, 0, 2]
@@ -163,28 +163,28 @@ def test_assigner_basic():
 
 
 def test_assigner_options():
-    res = RMaxIoUAssigner(0.7, 0.3, 0.3, match_low_quality=False).assign(PRIORS, GT, GT_LABELS)
+    res = MaxIoUAssigner(0.7, 0.3, 0.3, match_low_quality=False).assign(PRIORS, GT, GT_LABELS)
     assert res.gt_inds.tolist() == [1, -1, 0, -1]
-    res = RMaxIoUAssigner(0.7, (0.1, 0.3), 0.3).assign(PRIORS, GT, GT_LABELS)
+    res = MaxIoUAssigner(0.7, (0.1, 0.3), 0.3).assign(PRIORS, GT, GT_LABELS)
     assert res.gt_inds.tolist() == [1, -1, -1, 2]          # IoU 0 不在 [0.1, 0.3) 内
-    res = RMaxIoUAssigner(0.7, 0.3, 0.5).assign(PRIORS, GT, GT_LABELS)
+    res = MaxIoUAssigner(0.7, 0.3, 0.5).assign(PRIORS, GT, GT_LABELS)
     assert res.gt_inds.tolist() == [1, -1, 0, -1]          # 0.45 < min_pos_iou
 
 
 def test_assigner_no_gt():
-    res = RMaxIoUAssigner(0.7, 0.3).assign(PRIORS, GT[:0], GT_LABELS[:0])
+    res = MaxIoUAssigner(0.7, 0.3).assign(PRIORS, GT[:0], GT_LABELS[:0])
     assert res.gt_inds.tolist() == [0, 0, 0, 0] and res.labels.tolist() == [-1] * 4
 
 
 def test_assigner_vs_mmdet():
     pytest.importorskip('mmdet.models')
-    from mmdet.models.task_modules.assigners import MaxIoUAssigner
+    from mmdet.models.task_modules.assigners import MaxIoUAssigner as MMDetMaxIoUAssigner
     from mmengine.structures import InstanceData
     priors, gts = random_boxes(300, seed=14), random_boxes(6, seed=15)
     labels = torch.arange(6)
-    ref = MaxIoUAssigner(0.7, 0.3, 0.3).assign(InstanceData(priors=priors),
+    ref = MMDetMaxIoUAssigner(0.7, 0.3, 0.3).assign(InstanceData(priors=priors),
                                                InstanceData(bboxes=gts, labels=labels))
-    mine = RMaxIoUAssigner(0.7, 0.3, 0.3).assign(priors, gts, labels)
+    mine = MaxIoUAssigner(0.7, 0.3, 0.3).assign(priors, gts, labels)
     assert torch.equal(mine.gt_inds, ref.gt_inds) and torch.equal(mine.labels, ref.labels)
 
 
@@ -201,7 +201,7 @@ def test_sampler_counts():
     torch.manual_seed(0)
     n = 1110
     priors, gts, gt_labels = random_boxes(n), random_boxes(3), torch.tensor([11, 12, 13])
-    sampler = RRandomSampler(num=256, pos_fraction=0.25, add_gt_as_proposals=False)
+    sampler = RandomSampler(num=256, pos_fraction=0.25, add_gt_as_proposals=False)
     res = sampler.sample(_fake_assign(100, 1000), priors, gts, gt_labels)
     assert len(res.pos_inds) == 64 and len(res.neg_inds) == 192
     assert (res.pos_inds < 100).all() and ((res.neg_inds >= 100) & (res.neg_inds < 1100)).all()
@@ -213,7 +213,7 @@ def test_sampler_counts():
     res = sampler.sample(_fake_assign(10, 1000), priors[:1020], gts, gt_labels)
     assert len(res.pos_inds) == 10 and len(res.neg_inds) == 246      # 正样本不够，用负样本补满
 
-    ub = RRandomSampler(num=256, pos_fraction=0.25, neg_pos_ub=3, add_gt_as_proposals=False)
+    ub = RandomSampler(num=256, pos_fraction=0.25, neg_pos_ub=3, add_gt_as_proposals=False)
     res = ub.sample(_fake_assign(10, 1000), priors[:1020], gts, gt_labels)
     assert len(res.neg_inds) == 30
 
@@ -221,7 +221,7 @@ def test_sampler_counts():
 def test_sampler_add_gt():
     torch.manual_seed(0)
     priors, gts, gt_labels = random_boxes(30), random_boxes(3), torch.tensor([11, 12, 13])
-    sampler = RRandomSampler(num=512, pos_fraction=0.25, add_gt_as_proposals=True)
+    sampler = RandomSampler(num=512, pos_fraction=0.25, add_gt_as_proposals=True)
     assign = _fake_assign(5, 15)
     res = sampler.sample(assign, priors, gts, gt_labels)
     assert len(res.pos_inds) == 8 and res.pos_is_gt.sum() == 3
@@ -233,8 +233,8 @@ def test_sampler_add_gt():
 
 def test_valid_flags_vs_mmdet():
     pytest.importorskip('mmdet.models')
-    from mmdet.models.task_modules.prior_generators import AnchorGenerator
-    ref = AnchorGenerator(strides=[4, 8, 16, 32, 64], ratios=[0.5, 1.0, 2.0], scales=[8])
+    from mmdet.models.task_modules.prior_generators import AnchorGenerator as MMDetAnchorGenerator
+    ref = MMDetAnchorGenerator(strides=[4, 8, 16, 32, 64], ratios=[0.5, 1.0, 2.0], scales=[8])
     sizes = [(20, 25), (10, 13), (5, 7), (3, 4), (2, 2)]
     for a, b in zip(_rpn_anchor_generator().valid_flags(sizes, (64, 96)),
                     ref.valid_flags(sizes, (64, 96), device='cpu')):

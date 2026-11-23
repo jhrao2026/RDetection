@@ -1,1 +1,1 @@
-from .fpn import RFPN  # noqa: F401
+from .fpn import FPN  # noqa: F401

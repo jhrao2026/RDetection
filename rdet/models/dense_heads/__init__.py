@@ -1,4 +1,4 @@
-from .retina_head import RRetinaHead
-from .rpn_head import RRPNHead
+from .retina_head import RetinaHead
+from .rpn_head import RPNHead
 
-__all__ = ['RRPNHead', 'RRetinaHead']
+__all__ = ['RPNHead', 'RetinaHead']

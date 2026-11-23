@@ -7,7 +7,7 @@ torch = pytest.importorskip('torch')
 torchvision = pytest.importorskip('torchvision')
 import torch.nn.functional as F  # noqa: E402
 
-from rdet.models.necks import RFPN  # noqa: E402
+from rdet.models.necks import FPN  # noqa: E402
 
 IN_CHANNELS = [256, 512, 1024, 2048]
 
@@ -19,7 +19,7 @@ def _feats(batch=2, h=64, w=48, seed=0):
 
 
 def test_faster_rcnn_fpn_shapes():
-    outs = RFPN(IN_CHANNELS, 256, num_outs=5)(_feats())
+    outs = FPN(IN_CHANNELS, 256, num_outs=5)(_feats())
     assert [o.shape for o in outs] == [(2, 256, 64 // 2 ** i, 48 // 2 ** i) for i in range(4)] + [(2, 256, 4, 3)]
     assert torch.equal(outs[4], F.max_pool2d(outs[3], 1, stride=2))
 
@@ -27,7 +27,7 @@ def test_faster_rcnn_fpn_shapes():
 def test_matches_torchvision_fpn():
     from torchvision.ops.feature_pyramid_network import FeaturePyramidNetwork, LastLevelMaxPool
     tv = FeaturePyramidNetwork(IN_CHANNELS, 256, extra_blocks=LastLevelMaxPool())
-    mine = RFPN(IN_CHANNELS, 256, num_outs=5)
+    mine = FPN(IN_CHANNELS, 256, num_outs=5)
     sd = {}
     for k, v in tv.state_dict().items():   # inner_blocks.i.0.weight -> lateral_convs.i.conv.weight
         name, i, _, p = k.split('.')
@@ -43,7 +43,7 @@ def test_matches_torchvision_fpn():
 
 
 def test_retinanet_style_extra_convs():
-    fpn = RFPN(IN_CHANNELS, 256, num_outs=5, start_level=1, add_extra_convs='on_input')
+    fpn = FPN(IN_CHANNELS, 256, num_outs=5, start_level=1, add_extra_convs='on_input')
     assert len(fpn.lateral_convs) == 3 and len(fpn.fpn_convs) == 5
     assert fpn.fpn_convs[3].conv.in_channels == 2048 and fpn.fpn_convs[4].conv.in_channels == 256
     outs = fpn(_feats())
@@ -57,9 +57,9 @@ def test_retinanet_style_extra_convs():
 ])
 def test_fpn_vs_mmdet(kwargs):
     pytest.importorskip('mmdet.models')
-    from mmdet.models.necks import FPN
-    ref = FPN(IN_CHANNELS, 256, **kwargs).eval()
-    mine = RFPN(IN_CHANNELS, 256, **kwargs).eval()
+    from mmdet.models.necks import FPN as MMDetFPN
+    ref = MMDetFPN(IN_CHANNELS, 256, **kwargs).eval()
+    mine = FPN(IN_CHANNELS, 256, **kwargs).eval()
     mine.load_state_dict(ref.state_dict())          # 命名必须完全一致（strict=True）
     feats = _feats(h=60, w=44)
     with torch.no_grad():
@@ -68,7 +68,7 @@ def test_fpn_vs_mmdet(kwargs):
 
 
 def test_init_weights():
-    fpn = RFPN(IN_CHANNELS, 256, num_outs=5)
+    fpn = FPN(IN_CHANNELS, 256, num_outs=5)
     for m in fpn.modules():
         if isinstance(m, torch.nn.Conv2d):
             torch.nn.init.constant_(m.bias, 1.)

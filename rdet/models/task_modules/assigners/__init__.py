@@ -1,1 +1,1 @@
-from .max_iou_assigner import AssignResult, RMaxIoUAssigner  # noqa: F401
+from .max_iou_assigner import AssignResult, MaxIoUAssigner  # noqa: F401

@@ -42,41 +42,42 @@
 把官方配置里的每一个模块都换成自己写的版本，最后加载官方权重得到同样的 mAP。
 
 设计约束：
-- 注册名加 `R` 前缀（`RResNet`、`RFPN` ...），避免和 mmdet 自带模块重名；
+- 类名和 mmdet 一样（`ResNet`、`FPN`、`RPNHead` ...），注册在 rdet 自己的子注册表里（scope `rdet`，见 `rdet/registry.py`）。
+  配置里写 `default_scope = 'rdet'` 后，`type='ResNet'` 优先用自己写的，rdet 没有的（数据集、评测等）自动回退到 mmdet；
 - **子模块 / 参数名与 mmdet 完全一致**，官方 checkpoint 才能直接加载 —— 这是最强的正确性检验；
 - 测试分两层：A 层只依赖 torch / torchvision，B 层（`*_vs_mmdet`）装了 mmdet 才运行，和 mmdet 的实现逐元素对比。
 
 **2.1 基础工具**（`pytest tests/test_bbox_utils.py`）
 - [ ] `rdet/structures/bbox.py`：IoU 矩阵 `bbox_overlaps`
 - [ ] `rdet/models/layers/nms.py`：纯 Python 的 `nms` / `batched_nms`
-- [ ] `rdet/models/task_modules/prior_generators/anchor_generator.py`：`RAnchorGenerator`
-- [ ] `rdet/models/task_modules/coders/delta_xywh_bbox_coder.py`：`RDeltaXYWHBBoxCoder`
-- [ ] `rdet/models/task_modules/assigners/max_iou_assigner.py`：`RMaxIoUAssigner`
-- [ ] `rdet/models/task_modules/samplers/random_sampler.py`：`RRandomSampler`
+- [ ] `rdet/models/task_modules/prior_generators/anchor_generator.py`：`AnchorGenerator`
+- [ ] `rdet/models/task_modules/coders/delta_xywh_bbox_coder.py`：`DeltaXYWHBBoxCoder`
+- [ ] `rdet/models/task_modules/assigners/max_iou_assigner.py`：`MaxIoUAssigner`
+- [ ] `rdet/models/task_modules/samplers/random_sampler.py`：`RandomSampler`
 
 **2.2 Backbone & Neck**（`pytest tests/test_resnet.py tests/test_fpn.py`）
-- [ ] `rdet/models/backbones/resnet.py`：`RResNet`（和 torchvision resnet50 输出一致；练习 7 加载预训练权重）
-- [ ] `rdet/models/necks/fpn.py`：`RFPN`（和 torchvision / mmdet FPN 输出一致）
+- [ ] `rdet/models/backbones/resnet.py`：`ResNet`（和 torchvision resnet50 输出一致；练习 7 加载预训练权重）
+- [ ] `rdet/models/necks/fpn.py`：`FPN`（和 torchvision / mmdet FPN 输出一致）
 
 **2.3 RPN Head**（`pytest tests/test_rpn_head.py`）
-- [ ] `rdet/models/dense_heads/rpn_head.py`：`RRPNHead` —— forward / 训练目标 / loss / 生成 proposals
+- [ ] `rdet/models/dense_heads/rpn_head.py`：`RPNHead` —— forward / 训练目标 / loss / 生成 proposals
 
 **2.4 RoI Head**（`pytest tests/test_roi_head.py`）
-- [ ] `rdet/models/roi_heads/roi_extractor.py`：`RSingleRoIExtractor`（按面积把 RoI 分配到 FPN 层 + RoIAlign）
-- [ ] `rdet/models/roi_heads/bbox_head.py`：`RShared2FCBBoxHead`（Shared2FC + 分类 / 回归 + multiclass NMS）
-- [ ] `rdet/models/roi_heads/standard_roi_head.py`：`bbox2roi` + `RStandardRoIHead`
+- [ ] `rdet/models/roi_heads/roi_extractor.py`：`SingleRoIExtractor`（按面积把 RoI 分配到 FPN 层 + RoIAlign）
+- [ ] `rdet/models/roi_heads/bbox_head.py`：`Shared2FCBBoxHead`（Shared2FC + 分类 / 回归 + multiclass NMS）
+- [ ] `rdet/models/roi_heads/standard_roi_head.py`：`bbox2roi` + `StandardRoIHead`
 
 **2.5 Detector + 配置**（`pytest tests/test_faster_rcnn.py`，需要 mmdet）
-- [ ] `rdet/models/detectors/faster_rcnn.py`：`RFasterRCNN`
+- [ ] `rdet/models/detectors/faster_rcnn.py`：`FasterRCNN`
 - [ ] 测试全部通过后，在服务器上跑最终验收：
-  - [ ] `python tools/test.py configs/faster_rcnn/rfaster-rcnn_r50_fpn_1x_coco.py <官方权重>`：bbox mAP = 37.4
-  - [ ] `bash tools/dist_train.sh configs/faster_rcnn/rfaster-rcnn_r50_fpn_1x_coco.py 8`：mAP 与官方差距 ≤ 0.3
+  - [ ] `python tools/test.py configs/faster_rcnn/faster-rcnn_r50_fpn_1x_coco.py <官方权重>`：bbox mAP = 37.4
+  - [ ] `bash tools/dist_train.sh configs/faster_rcnn/faster-rcnn_r50_fpn_1x_coco.py 8`：mAP 与官方差距 ≤ 0.3
 
 **2.6 RetinaNet（衔接 YOLO）**（`pytest tests/test_retinanet.py`）
 - [ ] `rdet/models/losses/focal_loss.py`：`sigmoid_focal_loss`
-- [ ] `rdet/models/dense_heads/retina_head.py`：`RRetinaHead`（建议复制自己的 RPN 代码再改）
-- [ ] `rdet/models/detectors/single_stage.py`：`RSingleStageDetector`
-- [ ] 服务器验收：`configs/retinanet/rretinanet_r50_fpn_1x_coco.py` 加载官方权重 mAP = 36.5
+- [ ] `rdet/models/dense_heads/retina_head.py`：`RetinaHead`（建议复制自己的 RPN 代码再改）
+- [ ] `rdet/models/detectors/single_stage.py`：`SingleStageDetector`
+- [ ] 服务器验收：`configs/retinanet/retinanet_r50_fpn_1x_coco.py` 加载官方权重 mAP = 36.5
 
 > 小技巧：从头训练时，mmengine 会在日志里逐个参数打印 "Initialized by user-defined `init_weights` in XXX"，
 > 可以用它确认自己写的 init_weights 真的生效了。

@@ -4,16 +4,16 @@ import pytest
 torch = pytest.importorskip('torch')
 pytest.importorskip('torchvision')
 
-from helpers import fpn_feats, mmdet_scope, random_boxes, sum_loss  # noqa: E402
+from helpers import fpn_feats, random_boxes, scope, sum_loss  # noqa: E402
 
-from rdet.models.dense_heads import RRPNHead  # noqa: E402
+from rdet.models.dense_heads import RPNHead  # noqa: E402
 
-ANCHOR = dict(type='RAnchorGenerator', scales=[8], ratios=[0.5, 1.0, 2.0], strides=[4, 8, 16, 32, 64])
-CODER = dict(type='RDeltaXYWHBBoxCoder', target_means=[0.] * 4, target_stds=[1.] * 4)
+ANCHOR = dict(type='AnchorGenerator', scales=[8], ratios=[0.5, 1.0, 2.0], strides=[4, 8, 16, 32, 64])
+CODER = dict(type='DeltaXYWHBBoxCoder', target_means=[0.] * 4, target_stds=[1.] * 4)
 TRAIN = dict(
-    assigner=dict(type='RMaxIoUAssigner', pos_iou_thr=0.7, neg_iou_thr=0.3, min_pos_iou=0.3,
+    assigner=dict(type='MaxIoUAssigner', pos_iou_thr=0.7, neg_iou_thr=0.3, min_pos_iou=0.3,
                   match_low_quality=True),
-    sampler=dict(type='RRandomSampler', num=256, pos_fraction=0.5, neg_pos_ub=-1,
+    sampler=dict(type='RandomSampler', num=256, pos_fraction=0.5, neg_pos_ub=-1,
                  add_gt_as_proposals=False))
 TEST = dict(nms_pre=1000, max_per_img=300, nms=dict(type='nms', iou_threshold=0.7), min_bbox_size=0)
 
@@ -25,7 +25,7 @@ GT = [random_boxes(3, 128, 96, seed=1), random_boxes(2, 90, 60, seed=2)]
 
 def make_head():
     torch.manual_seed(0)
-    head = RRPNHead(256, 256, ANCHOR, CODER, train_cfg=TRAIN, test_cfg=TEST)
+    head = RPNHead(256, 256, ANCHOR, CODER, train_cfg=TRAIN, test_cfg=TEST)
     head.init_weights()
     return head
 
@@ -84,10 +84,14 @@ def test_predict():
 
 
 def _mmdet_rpn_head():
-    from mmdet.models.dense_heads import RPNHead
+    from mmdet.models.dense_heads import RPNHead as MMDetRPNHead
     from mmengine.config import ConfigDict
-    mmdet_scope()
-    return RPNHead(
+    with scope('mmdet'):
+        return _build_mmdet_rpn_head(MMDetRPNHead, ConfigDict)
+
+
+def _build_mmdet_rpn_head(MMDetRPNHead, ConfigDict):
+    return MMDetRPNHead(
         in_channels=256, feat_channels=256,
         anchor_generator=dict(type='AnchorGenerator', scales=[8], ratios=[0.5, 1.0, 2.0],
                               strides=[4, 8, 16, 32, 64]),

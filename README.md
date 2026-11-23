@@ -73,5 +73,5 @@ pytest -rs        # SKIPPED = 练习还没写；FAILED = 写了但不对；PASSE
 
 | 模型 | Backbone | 输入 | Epochs | box mAP（本项目） | box mAP（官方） | 配置 | 权重 |
 |---|---|---|---|---|---|---|---|
-| Faster R-CNN（rdet 实现） | R-50-FPN | 1333×800 | 12 | — | 37.4 | [config](configs/faster_rcnn/rfaster-rcnn_r50_fpn_1x_coco.py) | — |
-| RetinaNet（rdet 实现） | R-50-FPN | 1333×800 | 12 | — | 36.5 | [config](configs/retinanet/rretinanet_r50_fpn_1x_coco.py) | — |
+| Faster R-CNN（rdet 实现） | R-50-FPN | 1333×800 | 12 | — | 37.4 | [config](configs/faster_rcnn/faster-rcnn_r50_fpn_1x_coco.py) | — |
+| RetinaNet（rdet 实现） | R-50-FPN | 1333×800 | 12 | — | 36.5 | [config](configs/retinanet/retinanet_r50_fpn_1x_coco.py) | — |

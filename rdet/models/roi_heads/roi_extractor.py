@@ -34,7 +34,7 @@ from rdet.registry import MODELS
 
 
 @MODELS.register_module()
-class RSingleRoIExtractor(nn.Module):
+class SingleRoIExtractor(nn.Module):
     """Args:
         roi_layer: dict(type='RoIAlign', output_size=7, sampling_ratio=0, aligned=True)
             只读取 output_size / sampling_ratio / aligned 三个字段
@@ -67,7 +67,7 @@ class RSingleRoIExtractor(nn.Module):
         思考：+1e-6 是为了什么？去掉它，边长恰好 112 的框会被分到哪一层？
         """
         # TODO(1)
-        raise NotImplementedError('RSingleRoIExtractor.map_roi_levels')
+        raise NotImplementedError('SingleRoIExtractor.map_roi_levels')
 
     def forward(self, feats: Sequence[torch.Tensor], rois: torch.Tensor) -> torch.Tensor:
         """练习 2：返回 [K, out_channels, 7, 7]。
@@ -91,4 +91,4 @@ class RSingleRoIExtractor(nn.Module):
         """
         rois = rois.type_as(feats[0])
         # TODO(2)
-        raise NotImplementedError('RSingleRoIExtractor.forward')
+        raise NotImplementedError('SingleRoIExtractor.forward')

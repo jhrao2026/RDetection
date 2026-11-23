@@ -40,7 +40,7 @@ from rdet.registry import MODELS, TASK_UTILS
 
 
 @MODELS.register_module()
-class RShared2FCBBoxHead(nn.Module):
+class Shared2FCBBoxHead(nn.Module):
 
     def __init__(self, in_channels: int = 256, fc_out_channels: int = 1024, roi_feat_size: int = 7,
                  num_classes: int = 80, bbox_coder: dict = None, reg_class_agnostic: bool = False,
@@ -54,7 +54,7 @@ class RShared2FCBBoxHead(nn.Module):
         #         fc_cls: fc_out_channels → num_classes + 1
         #         fc_reg: fc_out_channels → num_classes * 4
         #         relu
-        raise NotImplementedError('RShared2FCBBoxHead.__init__')
+        raise NotImplementedError('Shared2FCBBoxHead.__init__')
 
     def init_weights(self) -> None:
         """练习 2（与 mmdet 一致）：
@@ -64,12 +64,12 @@ class RShared2FCBBoxHead(nn.Module):
         思考：fc_reg 为什么用这么小的 std？（提示：训练刚开始时，希望 decode 出来的框 ≈ proposal 本身）
         """
         # TODO(2)
-        raise NotImplementedError('RShared2FCBBoxHead.init_weights')
+        raise NotImplementedError('Shared2FCBBoxHead.init_weights')
 
     def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """练习 3：x [K, 256, 7, 7] → (cls_score [K, C+1], bbox_pred [K, C*4])"""
         # TODO(3) flatten(1) → 两个 fc（每个后面接 ReLU）→ fc_cls / fc_reg
-        raise NotImplementedError('RShared2FCBBoxHead.forward')
+        raise NotImplementedError('Shared2FCBBoxHead.forward')
 
     # ------------------------------------------------------------------ loss
     def get_targets(self, sampling_results: List) -> Tuple[torch.Tensor, ...]:
@@ -83,7 +83,7 @@ class RShared2FCBBoxHead(nn.Module):
         返回 (labels, label_weights, bbox_targets, bbox_weights)，都是 cat 后的结果
         """
         # TODO(4a)
-        raise NotImplementedError('RShared2FCBBoxHead.get_targets')
+        raise NotImplementedError('Shared2FCBBoxHead.get_targets')
 
     def loss(self, cls_score: torch.Tensor, bbox_pred: torch.Tensor, labels: torch.Tensor,
              label_weights: torch.Tensor, bbox_targets: torch.Tensor,
@@ -106,7 +106,7 @@ class RShared2FCBBoxHead(nn.Module):
         - 为什么 acc 不参与反传也要放进 loss 字典？（回顾 mini_mm 的 parse_losses）
         """
         # TODO(4b)
-        raise NotImplementedError('RShared2FCBBoxHead.loss')
+        raise NotImplementedError('Shared2FCBBoxHead.loss')
 
     # ------------------------------------------------------------------ predict
     def predict_single(self, rois: torch.Tensor, cls_score: torch.Tensor, bbox_pred: torch.Tensor,
@@ -133,4 +133,4 @@ class RShared2FCBBoxHead(nn.Module):
         - 为什么不同类别之间不做 NMS？
         """
         # TODO(5)
-        raise NotImplementedError('RShared2FCBBoxHead.predict_single')
+        raise NotImplementedError('Shared2FCBBoxHead.predict_single')

@@ -4,22 +4,22 @@ import pytest
 torch = pytest.importorskip('torch')
 torchvision = pytest.importorskip('torchvision')
 
-from helpers import fpn_feats, mmdet_scope, random_boxes  # noqa: E402
+from helpers import fpn_feats, random_boxes, scope  # noqa: E402
 
-from rdet.models.roi_heads import (RShared2FCBBoxHead, RSingleRoIExtractor,  # noqa: E402
-                                   RStandardRoIHead, bbox2roi)
+from rdet.models.roi_heads import (Shared2FCBBoxHead, SingleRoIExtractor,  # noqa: E402
+                                   StandardRoIHead, bbox2roi)
 from rdet.models.task_modules import SamplingResult  # noqa: E402
 
 NUM_CLASSES = 5
-EXTRACTOR = dict(type='RSingleRoIExtractor', roi_layer=dict(type='RoIAlign', output_size=7, sampling_ratio=0),
+EXTRACTOR = dict(type='SingleRoIExtractor', roi_layer=dict(type='RoIAlign', output_size=7, sampling_ratio=0),
                  out_channels=256, featmap_strides=[4, 8, 16, 32])
-CODER = dict(type='RDeltaXYWHBBoxCoder', target_means=[0.] * 4, target_stds=[0.1, 0.1, 0.2, 0.2])
-BBOX_HEAD = dict(type='RShared2FCBBoxHead', in_channels=256, fc_out_channels=1024, roi_feat_size=7,
+CODER = dict(type='DeltaXYWHBBoxCoder', target_means=[0.] * 4, target_stds=[0.1, 0.1, 0.2, 0.2])
+BBOX_HEAD = dict(type='Shared2FCBBoxHead', in_channels=256, fc_out_channels=1024, roi_feat_size=7,
                  num_classes=NUM_CLASSES, bbox_coder=CODER, reg_class_agnostic=False)
 TRAIN = dict(
-    assigner=dict(type='RMaxIoUAssigner', pos_iou_thr=0.5, neg_iou_thr=0.5, min_pos_iou=0.5,
+    assigner=dict(type='MaxIoUAssigner', pos_iou_thr=0.5, neg_iou_thr=0.5, min_pos_iou=0.5,
                   match_low_quality=False),
-    sampler=dict(type='RRandomSampler', num=64, pos_fraction=0.25, neg_pos_ub=-1, add_gt_as_proposals=True))
+    sampler=dict(type='RandomSampler', num=64, pos_fraction=0.25, neg_pos_ub=-1, add_gt_as_proposals=True))
 TEST = dict(score_thr=0.05, nms=dict(type='nms', iou_threshold=0.5), max_per_img=100)
 
 IMG_SHAPES = [(256, 192), (200, 160)]
@@ -40,7 +40,7 @@ def proposals(seed=0):
 
 def make_bbox_head(**kw):
     torch.manual_seed(0)
-    head = RShared2FCBBoxHead(**{k: v for k, v in BBOX_HEAD.items() if k != 'type'}, **kw)
+    head = Shared2FCBBoxHead(**{k: v for k, v in BBOX_HEAD.items() if k != 'type'}, **kw)
     head.init_weights()
     return head
 
@@ -53,14 +53,14 @@ def test_bbox2roi():
 
 
 def test_extractor_map_levels():
-    ext = RSingleRoIExtractor(**{k: v for k, v in EXTRACTOR.items() if k != 'type'})
+    ext = SingleRoIExtractor(**{k: v for k, v in EXTRACTOR.items() if k != 'type'})
     sides = torch.tensor([50., 111.9, 112., 224., 448., 1000.])
     rois = torch.stack([torch.zeros(6), torch.zeros(6), torch.zeros(6), sides, sides], dim=1)
     assert ext.map_roi_levels(rois, 4).tolist() == [0, 0, 1, 2, 3, 3]
 
 
 def test_extractor_forward_matches_roi_align():
-    ext = RSingleRoIExtractor(**{k: v for k, v in EXTRACTOR.items() if k != 'type'})
+    ext = SingleRoIExtractor(**{k: v for k, v in EXTRACTOR.items() if k != 'type'})
     feats = fpn_feats(2, 256, 192, strides=(4, 8, 16, 32))
     rois = torch.tensor([[0, 10., 10., 60., 50.], [1, 0., 0., 150., 180.]])   # 分别落在 P2 / P3
     out = ext(feats, rois)
@@ -73,10 +73,10 @@ def test_extractor_forward_matches_roi_align():
 
 def test_extractor_vs_mmdet():
     pytest.importorskip('mmdet.models')
-    from mmdet.models.roi_heads.roi_extractors import SingleRoIExtractor
-    ref = SingleRoIExtractor(roi_layer=dict(type='RoIAlign', output_size=7, sampling_ratio=0),
+    from mmdet.models.roi_heads.roi_extractors import SingleRoIExtractor as MMDetSingleRoIExtractor
+    ref = MMDetSingleRoIExtractor(roi_layer=dict(type='RoIAlign', output_size=7, sampling_ratio=0),
                              out_channels=256, featmap_strides=[4, 8, 16, 32])
-    mine = RSingleRoIExtractor(**{k: v for k, v in EXTRACTOR.items() if k != 'type'})
+    mine = SingleRoIExtractor(**{k: v for k, v in EXTRACTOR.items() if k != 'type'})
     feats = fpn_feats(2, 256, 192, strides=(4, 8, 16, 32))
     rois = bbox2roi(proposals())
     assert torch.allclose(mine(feats, rois), ref(feats, rois), atol=1e-5)
@@ -136,15 +136,15 @@ def test_bbox_head_predict():
 
 def test_bbox_head_vs_mmdet():
     pytest.importorskip('mmdet.models')
-    from mmdet.models.roi_heads.bbox_heads import Shared2FCBBoxHead
+    from mmdet.models.roi_heads.bbox_heads import Shared2FCBBoxHead as MMDetShared2FCBBoxHead
     from mmengine.config import ConfigDict
-    mmdet_scope()
-    ref = Shared2FCBBoxHead(in_channels=256, fc_out_channels=1024, roi_feat_size=7, num_classes=NUM_CLASSES,
-                            bbox_coder=dict(type='DeltaXYWHBBoxCoder', target_means=[0.] * 4,
-                                            target_stds=[0.1, 0.1, 0.2, 0.2]),
-                            reg_class_agnostic=False,
-                            loss_cls=dict(type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0),
-                            loss_bbox=dict(type='L1Loss', loss_weight=1.0))
+    with scope('mmdet'):
+        ref = MMDetShared2FCBBoxHead(
+            in_channels=256, fc_out_channels=1024, roi_feat_size=7, num_classes=NUM_CLASSES,
+            bbox_coder=dict(type='DeltaXYWHBBoxCoder', target_means=[0.] * 4, target_stds=[0.1, 0.1, 0.2, 0.2]),
+            reg_class_agnostic=False,
+            loss_cls=dict(type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0),
+            loss_bbox=dict(type='L1Loss', loss_weight=1.0))
     mine = make_bbox_head()
     mine.load_state_dict(ref.state_dict())
     x = torch.randn(10, 256, 7, 7)
@@ -173,7 +173,7 @@ def test_bbox_head_vs_mmdet():
 # ------------------------------------------------------------------ standard roi head
 def make_roi_head():
     torch.manual_seed(0)
-    head = RStandardRoIHead(EXTRACTOR, BBOX_HEAD, train_cfg=TRAIN, test_cfg=TEST)
+    head = StandardRoIHead(EXTRACTOR, BBOX_HEAD, train_cfg=TRAIN, test_cfg=TEST)
     head.init_weights()
     return head
 
@@ -198,29 +198,29 @@ def test_roi_head_loss_and_predict():
 
 def test_roi_head_vs_mmdet():
     pytest.importorskip('mmdet.models')
-    from mmdet.models.roi_heads import StandardRoIHead
+    from mmdet.models.roi_heads import StandardRoIHead as MMDetStandardRoIHead
     from mmdet.structures import DetDataSample
     from mmengine.config import ConfigDict
     from mmengine.structures import InstanceData
-    mmdet_scope()
-    ref = StandardRoIHead(
-        bbox_roi_extractor=dict(type='SingleRoIExtractor',
-                                roi_layer=dict(type='RoIAlign', output_size=7, sampling_ratio=0),
-                                out_channels=256, featmap_strides=[4, 8, 16, 32]),
-        bbox_head=dict(type='Shared2FCBBoxHead', in_channels=256, fc_out_channels=1024, roi_feat_size=7,
-                       num_classes=NUM_CLASSES,
-                       bbox_coder=dict(type='DeltaXYWHBBoxCoder', target_means=[0.] * 4,
-                                       target_stds=[0.1, 0.1, 0.2, 0.2]),
-                       reg_class_agnostic=False,
-                       loss_cls=dict(type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0),
-                       loss_bbox=dict(type='L1Loss', loss_weight=1.0)),
-        train_cfg=ConfigDict(
-            assigner=dict(type='MaxIoUAssigner', pos_iou_thr=0.5, neg_iou_thr=0.5, min_pos_iou=0.5,
-                          match_low_quality=False, ignore_iof_thr=-1),
-            sampler=dict(type='RandomSampler', num=64, pos_fraction=0.25, neg_pos_ub=-1,
-                         add_gt_as_proposals=True),
-            pos_weight=-1, debug=False),
-        test_cfg=ConfigDict(TEST))
+    with scope('mmdet'):
+        ref = MMDetStandardRoIHead(
+            bbox_roi_extractor=dict(type='SingleRoIExtractor',
+                                    roi_layer=dict(type='RoIAlign', output_size=7, sampling_ratio=0),
+                                    out_channels=256, featmap_strides=[4, 8, 16, 32]),
+            bbox_head=dict(type='Shared2FCBBoxHead', in_channels=256, fc_out_channels=1024, roi_feat_size=7,
+                           num_classes=NUM_CLASSES,
+                           bbox_coder=dict(type='DeltaXYWHBBoxCoder', target_means=[0.] * 4,
+                                           target_stds=[0.1, 0.1, 0.2, 0.2]),
+                           reg_class_agnostic=False,
+                           loss_cls=dict(type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0),
+                           loss_bbox=dict(type='L1Loss', loss_weight=1.0)),
+            train_cfg=ConfigDict(
+                assigner=dict(type='MaxIoUAssigner', pos_iou_thr=0.5, neg_iou_thr=0.5, min_pos_iou=0.5,
+                              match_low_quality=False, ignore_iof_thr=-1),
+                sampler=dict(type='RandomSampler', num=64, pos_fraction=0.25, neg_pos_ub=-1,
+                             add_gt_as_proposals=True),
+                pos_weight=-1, debug=False),
+            test_cfg=ConfigDict(TEST))
     mine = make_roi_head()
     mine.load_state_dict(ref.state_dict())
     with torch.no_grad():                    # 让分类更 "尖"，否则 softmax 后都低于 score_thr，没东西可比

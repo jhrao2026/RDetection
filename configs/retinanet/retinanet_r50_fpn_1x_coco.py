@@ -1,4 +1,4 @@
-# RetinaNet R50-FPN 1x COCO —— 全部模块替换为 rdet 中自己实现的版本
+# RetinaNet R50-FPN 1x COCO —— 所有模型组件都用 rdet 里自己实现的版本
 #
 # 对照：mmdet 的 configs/retinanet/retinanet_r50_fpn_1x_coco.py 和 configs/_base_/models/retinanet_r50_fpn.py
 # 官方 bbox mAP：36.5
@@ -12,9 +12,13 @@ _base_ = [
 ]
 
 custom_imports = dict(imports=['rdet'], allow_failed_imports=False)
+# ★ 必须设置：从 rdet 的注册表开始查找，type='ResNet' 才会用到自己写的 ResNet（见 rdet/registry.py）。
+#   rdet 里没有的模块（CocoDataset、DetDataPreprocessor、CocoMetric ...）会自动回退到 mmdet。
+#   mmdet 的 default_runtime.py 里写的是 default_scope = 'mmdet'，这里覆盖掉它。
+default_scope = 'rdet'
 
 model = dict(
-    type='RSingleStageDetector',
+    type='SingleStageDetector',
     data_preprocessor=dict(
         type='DetDataPreprocessor',
         mean=[123.675, 116.28, 103.53],
@@ -22,40 +26,40 @@ model = dict(
         bgr_to_rgb=True,
         pad_size_divisor=32),
     backbone=dict(
-        type='RResNet',
+        type='ResNet',
         depth=50,
         out_indices=(0, 1, 2, 3),
         frozen_stages=1,
         norm_eval=True,
         init_cfg=dict(type='Pretrained', checkpoint='torchvision://resnet50')),
     neck=dict(
-        type='RFPN',
+        type='FPN',
         in_channels=[256, 512, 1024, 2048],
         out_channels=256,
         start_level=1,
         add_extra_convs='on_input',
         num_outs=5),
     bbox_head=dict(
-        type='RRetinaHead',
+        type='RetinaHead',
         num_classes=80,
         in_channels=256,
         stacked_convs=4,
         feat_channels=256,
         anchor_generator=dict(
-            type='RAnchorGenerator',
+            type='AnchorGenerator',
             # mmdet 写法是 octave_base_scale=4, scales_per_octave=3，等价于 4 * 2 ** (i / 3), i = 0, 1, 2
             scales=[4.0, 5.039684199579493, 6.3496042078727974],
             ratios=[0.5, 1.0, 2.0],
             strides=[8, 16, 32, 64, 128]),
         bbox_coder=dict(
-            type='RDeltaXYWHBBoxCoder',
+            type='DeltaXYWHBBoxCoder',
             target_means=[.0, .0, .0, .0],
             target_stds=[1.0, 1.0, 1.0, 1.0]),
         focal_gamma=2.0,
         focal_alpha=0.25),
     train_cfg=dict(
         assigner=dict(
-            type='RMaxIoUAssigner',
+            type='MaxIoUAssigner',
             pos_iou_thr=0.5,
             neg_iou_thr=0.4,
             min_pos_iou=0,

@@ -47,7 +47,7 @@ from rdet.registry import MODELS, TASK_UTILS
 
 
 @MODELS.register_module()
-class RRPNHead(nn.Module):
+class RPNHead(nn.Module):
     """Args:
         in_channels: 输入通道（FPN 输出，256）
         feat_channels: 中间 3x3 卷积的通道（256）
@@ -75,12 +75,12 @@ class RRPNHead(nn.Module):
         #   rpn_cls:  feat_channels → A * 1，1x1        （sigmoid 二分类，每个 anchor 1 个 logit）
         #   rpn_reg:  feat_channels → A * 4，1x1        （每个 anchor 4 个 delta）
         # 思考：为什么用 1 个 logit + sigmoid，而不是 2 个 logit + softmax？两者等价吗？
-        raise NotImplementedError('RRPNHead.__init__')
+        raise NotImplementedError('RPNHead.__init__')
 
     def init_weights(self) -> None:
         """练习 2：三个卷积都用 normal(std=0.01) 初始化 weight，bias 置 0（与 mmdet 一致）。"""
         # TODO(2)
-        raise NotImplementedError('RRPNHead.init_weights')
+        raise NotImplementedError('RPNHead.init_weights')
 
     # ------------------------------------------------------------------ forward
     def forward(self, feats: Sequence[torch.Tensor]) -> Tuple[List[torch.Tensor], List[torch.Tensor]]:
@@ -94,7 +94,7 @@ class RRPNHead(nn.Module):
         思考：不同层共享参数合理吗？（提示：anchor 的尺寸是随层变化的，网络只需要学 "相对" 的东西）
         """
         # TODO(3)
-        raise NotImplementedError('RRPNHead.forward')
+        raise NotImplementedError('RPNHead.forward')
 
     # ------------------------------------------------------------------ loss
     def get_anchors(self, featmap_sizes, batch_pad_shapes, device):
@@ -106,7 +106,7 @@ class RRPNHead(nn.Module):
           得到各层结果再 cat
         """
         # TODO(4)
-        raise NotImplementedError('RRPNHead.get_anchors')
+        raise NotImplementedError('RPNHead.get_anchors')
 
     def _get_targets_single(self, anchors: torch.Tensor, valid_flags: torch.Tensor,
                             gt_bboxes: torch.Tensor):
@@ -134,7 +134,7 @@ class RRPNHead(nn.Module):
               RetinaNet（2.6）只用正样本数归一化，原因是什么？
         """
         # TODO(5)
-        raise NotImplementedError('RRPNHead._get_targets_single')
+        raise NotImplementedError('RPNHead._get_targets_single')
 
     def loss(self, cls_scores: List[torch.Tensor], bbox_preds: List[torch.Tensor],
              batch_gt_bboxes: List[torch.Tensor], batch_pad_shapes: List[Tuple[int, int]]) -> dict:
@@ -155,7 +155,7 @@ class RRPNHead(nn.Module):
         思考：Faster R-CNN 原论文用的是 Smooth L1，mmdet 的默认配置换成了 L1，为什么？
         """
         # TODO(6)
-        raise NotImplementedError('RRPNHead.loss')
+        raise NotImplementedError('RPNHead.loss')
 
     # ------------------------------------------------------------------ predict
     def predict(self, cls_scores: List[torch.Tensor], bbox_preds: List[torch.Tensor],
@@ -187,4 +187,4 @@ class RRPNHead(nn.Module):
         """
         cfg = self.test_cfg if cfg is None else cfg
         # TODO(7)
-        raise NotImplementedError('RRPNHead.predict')
+        raise NotImplementedError('RPNHead.predict')

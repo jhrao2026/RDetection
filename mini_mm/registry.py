@@ -16,7 +16,7 @@
 这就是 OpenMMLab "配置驱动 + 模块解耦" 的核心。
 
 与 mmengine 的差异（刻意简化，便于学习）：
-- 不支持 scope（mmdet::xxx 这种跨库前缀）和父子 Registry；
+- 不支持 scope（mmdet::xxx 这种跨库前缀）和父子 Registry（rdet/registry.py 里会用到真正的父子注册表）；
 - 不支持 lazy import / locations；
 - build 只做递归最少的事情。
 读懂本文件后，建议对照 mmengine 源码，看它多出来的部分分别解决什么问题。

@@ -24,10 +24,26 @@ def sum_loss(v):
     return sum(v) if isinstance(v, (list, tuple)) else v
 
 
-def mmdet_scope():
-    """构建 mmdet 模块前设置 default scope（Runner 会自动做这件事，单独测试时要手动做）。"""
-    from mmengine.registry import init_default_scope
-    init_default_scope('mmdet')
+def scope(name):
+    """临时切换 default scope 的上下文管理器（Runner 会根据配置里的 default_scope 自动做这件事）。
+
+    rdet 和 mmdet 有大量同名模块，构建时用哪一个取决于当前 scope：
+        with scope('mmdet'): ...   # 构建 mmdet 的参照实现
+        with scope('rdet'):  ...   # 构建我们自己的实现（tests/conftest.py 默认就是 rdet）
+    """
+    from mmengine.registry import DefaultScope
+    return DefaultScope.overwrite_default_scope(name)
+
+
+def build_from_config(path):
+    """像 Runner 一样：读配置 → 按配置里的 default_scope 构建模型（不下载预训练权重）。"""
+    from mmengine.config import Config
+    from mmengine.registry import MODELS
+    import rdet  # noqa: F401
+    cfg = Config.fromfile(path)
+    cfg.model.backbone.init_cfg = None
+    with scope(cfg.get('default_scope', 'mmdet')):
+        return MODELS.build(cfg.model)
 
 
 def mmdet_config(rel_path):

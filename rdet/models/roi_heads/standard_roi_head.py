@@ -40,7 +40,7 @@ def bbox2roi(bbox_list: List[torch.Tensor]) -> torch.Tensor:
 
 
 @MODELS.register_module()
-class RStandardRoIHead(nn.Module):
+class StandardRoIHead(nn.Module):
     """★ 子模块名 bbox_roi_extractor / bbox_head 与 mmdet 一致（权重 key 是 roi_head.bbox_head.xxx）。"""
 
     def __init__(self, bbox_roi_extractor: dict, bbox_head: dict, train_cfg: dict = None,
@@ -66,7 +66,7 @@ class RStandardRoIHead(nn.Module):
         思考：为什么只用 feats[:4]？P6 去哪了？（它只给 RPN 的大 anchor 用）
         """
         # TODO(2)
-        raise NotImplementedError('RStandardRoIHead._bbox_forward')
+        raise NotImplementedError('StandardRoIHead._bbox_forward')
 
     def loss(self, feats: Sequence[torch.Tensor], batch_proposals: List[torch.Tensor],
              batch_gt_bboxes: List[torch.Tensor], batch_gt_labels: List[torch.Tensor]) -> dict:
@@ -82,7 +82,7 @@ class RStandardRoIHead(nn.Module):
            return self.bbox_head.loss(cls_score, bbox_pred, *targets)
         """
         # TODO(3)
-        raise NotImplementedError('RStandardRoIHead.loss')
+        raise NotImplementedError('StandardRoIHead.loss')
 
     def predict(self, feats: Sequence[torch.Tensor], batch_proposals: List[torch.Tensor],
                 batch_img_shapes: List[Tuple[int, int]], batch_scale_factors: List[Tuple[float, float]],
@@ -97,4 +97,4 @@ class RStandardRoIHead(nn.Module):
         """
         cfg = self.test_cfg if cfg is None else cfg
         # TODO(4)
-        raise NotImplementedError('RStandardRoIHead.predict')
+        raise NotImplementedError('StandardRoIHead.predict')

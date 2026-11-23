@@ -44,7 +44,7 @@ from ..necks.fpn import ConvModule  # noqa: F401  复用 FPN 里的极简 ConvMo
 
 
 @MODELS.register_module()
-class RRetinaHead(nn.Module):
+class RetinaHead(nn.Module):
 
     def __init__(self, num_classes: int, in_channels: int, stacked_convs: int = 4,
                  feat_channels: int = 256, anchor_generator: dict = None, bbox_coder: dict = None,
@@ -68,7 +68,7 @@ class RRetinaHead(nn.Module):
         #                          第一个的 c_in = in_channels，其余 = feat_channels
         #   retina_cls: Conv2d(feat_channels, A * num_classes, 3, padding=1)
         #   retina_reg: Conv2d(feat_channels, A * 4, 3, padding=1)
-        raise NotImplementedError('RRetinaHead.__init__')
+        raise NotImplementedError('RetinaHead.__init__')
 
     def init_weights(self) -> None:
         """练习 2：所有 Conv2d 用 normal(std=0.01)、bias 0；然后把 retina_cls 的 bias 设为
@@ -79,7 +79,7 @@ class RRetinaHead(nn.Module):
               如果 bias 是 0（初始概率 0.5），第一次迭代 10 万个背景 anchor 的 loss 会有多大？
         """
         # TODO(2)
-        raise NotImplementedError('RRetinaHead.init_weights')
+        raise NotImplementedError('RetinaHead.init_weights')
 
     def forward(self, feats: Sequence[torch.Tensor]) -> Tuple[List[torch.Tensor], List[torch.Tensor]]:
         """练习 3：每层：cls_feat 依次过 cls_convs → retina_cls；reg_feat 依次过 reg_convs → retina_reg。
@@ -87,7 +87,7 @@ class RRetinaHead(nn.Module):
         返回 (cls_scores [B, A*C, H, W] 列表, bbox_preds [B, A*4, H, W] 列表)
         """
         # TODO(3)
-        raise NotImplementedError('RRetinaHead.forward')
+        raise NotImplementedError('RetinaHead.forward')
 
     def loss(self, cls_scores: List[torch.Tensor], bbox_preds: List[torch.Tensor],
              batch_gt_bboxes: List[torch.Tensor], batch_gt_labels: List[torch.Tensor],
@@ -109,7 +109,7 @@ class RRetinaHead(nn.Module):
            loss_bbox = L1，除以同一个 avg_factor
         """
         # TODO(4)
-        raise NotImplementedError('RRetinaHead.loss')
+        raise NotImplementedError('RetinaHead.loss')
 
     def predict(self, cls_scores: List[torch.Tensor], bbox_preds: List[torch.Tensor],
                 batch_img_shapes: List[Tuple[int, int]], batch_scale_factors: List[Tuple[float, float]],
@@ -135,4 +135,4 @@ class RRetinaHead(nn.Module):
         """
         cfg = self.test_cfg if cfg is None else cfg
         # TODO(5)
-        raise NotImplementedError('RRetinaHead.predict')
+        raise NotImplementedError('RetinaHead.predict')

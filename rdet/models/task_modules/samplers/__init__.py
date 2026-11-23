@@ -1,1 +1,1 @@
-from .random_sampler import RRandomSampler, SamplingResult  # noqa: F401
+from .random_sampler import RandomSampler, SamplingResult  # noqa: F401

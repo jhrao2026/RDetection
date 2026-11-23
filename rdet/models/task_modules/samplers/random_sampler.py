@@ -50,7 +50,7 @@ class SamplingResult:
 
 
 @TASK_UTILS.register_module()
-class RRandomSampler:
+class RandomSampler:
 
     def __init__(self, num: int, pos_fraction: float, neg_pos_ub: int = -1,
                  add_gt_as_proposals: bool = True):
@@ -97,4 +97,4 @@ class RRandomSampler:
                pos_is_gt = gt_flags[pos_inds]
         """
         # TODO
-        raise NotImplementedError('RRandomSampler.sample')
+        raise NotImplementedError('RandomSampler.sample')

@@ -2,5 +2,5 @@
 from rdet.registry import HAS_MMDET
 
 if HAS_MMDET:
-    from .faster_rcnn import RFasterRCNN  # noqa: F401
-    from .single_stage import RSingleStageDetector  # noqa: F401
+    from .faster_rcnn import FasterRCNN  # noqa: F401
+    from .single_stage import SingleStageDetector  # noqa: F401

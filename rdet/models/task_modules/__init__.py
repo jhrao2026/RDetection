@@ -1,7 +1,7 @@
-from .assigners import AssignResult, RMaxIoUAssigner
-from .coders import RDeltaXYWHBBoxCoder
-from .prior_generators import RAnchorGenerator
-from .samplers import RRandomSampler, SamplingResult
+from .assigners import AssignResult, MaxIoUAssigner
+from .coders import DeltaXYWHBBoxCoder
+from .prior_generators import AnchorGenerator
+from .samplers import RandomSampler, SamplingResult
 
-__all__ = ['RAnchorGenerator', 'RDeltaXYWHBBoxCoder', 'RMaxIoUAssigner', 'AssignResult',
-           'RRandomSampler', 'SamplingResult']
+__all__ = ['AnchorGenerator', 'DeltaXYWHBBoxCoder', 'MaxIoUAssigner', 'AssignResult',
+           'RandomSampler', 'SamplingResult']

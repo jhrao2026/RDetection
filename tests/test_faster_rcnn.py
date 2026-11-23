@@ -1,4 +1,4 @@
-"""Stage 2.5 最终验收（需要 mmdet）：用自己的配置构建 RFasterRCNN，和 mmdet 官方 FasterRCNN
+"""Stage 2.5 最终验收（需要 mmdet）：用自己的配置构建 FasterRCNN，和 mmdet 官方 FasterRCNN
 
     1. 参数名完全一致（官方 checkpoint 能 strict 加载）
     2. 同一份权重、同一个随机种子下，loss 完全一致
@@ -14,20 +14,10 @@ import pytest
 torch = pytest.importorskip('torch')
 pytest.importorskip('mmdet.models')
 
-from helpers import mmdet_config, mmdet_scope  # noqa: E402
+from helpers import build_from_config, mmdet_config  # noqa: E402
 
-CFG = osp.join(osp.dirname(__file__), '..', 'configs', 'faster_rcnn', 'rfaster-rcnn_r50_fpn_1x_coco.py')
+CFG = osp.join(osp.dirname(__file__), '..', 'configs', 'faster_rcnn', 'faster-rcnn_r50_fpn_1x_coco.py')
 REF_CFG = 'faster_rcnn/faster-rcnn_r50_fpn_1x_coco.py'
-
-
-def build(cfg_path):
-    from mmdet.registry import MODELS
-    from mmengine.config import Config
-    import rdet  # noqa: F401
-    mmdet_scope()
-    cfg = Config.fromfile(cfg_path)
-    cfg.model.backbone.init_cfg = None          # 测试不下载预训练权重
-    return MODELS.build(cfg.model)
 
 
 def fake_batch(model, training):
@@ -53,11 +43,11 @@ def _unpack(data):
 @pytest.fixture(scope='module')
 def models():
     torch.manual_seed(0)
-    ref = build(mmdet_config(REF_CFG))
+    ref = build_from_config(mmdet_config(REF_CFG))
     with torch.no_grad():   # 随机初始化的 fc_cls 输出太 "平"，softmax 后都低于 0.05，调大一点才有检测结果
         ref.roi_head.bbox_head.fc_cls.weight.normal_(0, 1.0)
         ref.roi_head.bbox_head.fc_cls.bias[-1] = -10.0    # 压低背景类
-    mine = build(CFG)
+    mine = build_from_config(CFG)
     mine.load_state_dict(ref.state_dict(), strict=True)
     return mine, ref
 

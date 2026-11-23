@@ -1,1 +1,1 @@
-from .resnet import RResNet  # noqa: F401
+from .resnet import ResNet  # noqa: F401

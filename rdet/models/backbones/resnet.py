@@ -69,7 +69,7 @@ class Bottleneck(nn.Module):
 
 
 @MODELS.register_module()
-class RResNet(nn.Module):
+class ResNet(nn.Module):
     """Args:
         depth: 50 或 101
         out_indices: 输出哪些 stage（0 = layer1 ... 3 = layer4）
@@ -102,7 +102,7 @@ class RResNet(nn.Module):
         #           提示：self.inplanes 记录当前输入通道，_make_layer 会更新它
 
         # TODO(2.3) 调用 self._freeze_stages()
-        raise NotImplementedError('RResNet.__init__')
+        raise NotImplementedError('ResNet.__init__')
 
     def _make_layer(self, planes: int, blocks: int, stride: int) -> nn.Sequential:
         """练习 3：构建一个 stage。
@@ -113,7 +113,7 @@ class RResNet(nn.Module):
         - 之后 self.inplanes = planes * 4，再追加 blocks - 1 个 stride=1 的 Bottleneck
         """
         # TODO(3)
-        raise NotImplementedError('RResNet._make_layer')
+        raise NotImplementedError('ResNet._make_layer')
 
     def _freeze_stages(self) -> None:
         """练习 4：冻结参数。
@@ -124,12 +124,12 @@ class RResNet(nn.Module):
         思考：只设 requires_grad=False 而不设 eval()，BN 的 running_mean 还会变吗？
         """
         # TODO(4)
-        raise NotImplementedError('RResNet._freeze_stages')
+        raise NotImplementedError('ResNet._freeze_stages')
 
     def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, ...]:
         """练习 5：stem → layer1..4，把 out_indices 里的 stage 输出收集成 tuple 返回。"""
         # TODO(5)
-        raise NotImplementedError('RResNet.forward')
+        raise NotImplementedError('ResNet.forward')
 
     def init_weights(self) -> None:
         """练习 7：加载 ImageNet 预训练权重。
@@ -154,7 +154,7 @@ class RResNet(nn.Module):
               "看起来在训练、其实 backbone 是随机初始化" 的模型 —— 这类 bug 极难发现。
         """
         # TODO(7)
-        raise NotImplementedError('RResNet.init_weights')
+        raise NotImplementedError('ResNet.init_weights')
 
     def train(self, mode: bool = True):
         """练习 6：重写 train()。
@@ -169,4 +169,4 @@ class RResNet(nn.Module):
         思考：Runner 每个 epoch 开始都会调用 model.train()，如果不重写这个方法会怎样？
         """
         # TODO(6)
-        raise NotImplementedError('RResNet.train')
+        raise NotImplementedError('ResNet.train')

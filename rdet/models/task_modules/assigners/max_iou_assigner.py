@@ -65,7 +65,7 @@ class AssignResult:
 
 
 @TASK_UTILS.register_module()
-class RMaxIoUAssigner:
+class MaxIoUAssigner:
     """Args:
         pos_iou_thr: max IoU ≥ 该值 → 正样本
         neg_iou_thr: float 时 0 ≤ max IoU < 该值 → 负样本；
@@ -121,4 +121,4 @@ class RMaxIoUAssigner:
         7. return AssignResult(K, assigned_gt_inds, max_overlaps, labels)
         """
         # TODO
-        raise NotImplementedError('RMaxIoUAssigner.assign')
+        raise NotImplementedError('MaxIoUAssigner.assign')

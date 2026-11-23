@@ -1,1 +1,1 @@
-from .anchor_generator import RAnchorGenerator  # noqa: F401
+from .anchor_generator import AnchorGenerator  # noqa: F401

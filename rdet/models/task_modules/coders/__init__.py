@@ -1,1 +1,1 @@
-from .delta_xywh_bbox_coder import RDeltaXYWHBBoxCoder  # noqa: F401
+from .delta_xywh_bbox_coder import DeltaXYWHBBoxCoder  # noqa: F401

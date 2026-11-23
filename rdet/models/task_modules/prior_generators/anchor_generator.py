@@ -4,7 +4,7 @@
 目标
     为 FPN 的每一层特征图生成 anchor（先验框）。Faster R-CNN 的 RPN 配置是：
 
-        anchor_generator=dict(type='RAnchorGenerator',
+        anchor_generator=dict(type='AnchorGenerator',
                               scales=[8], ratios=[0.5, 1.0, 2.0],
                               strides=[4, 8, 16, 32, 64])
 
@@ -40,7 +40,7 @@ from rdet.registry import TASK_UTILS
 
 
 @TASK_UTILS.register_module()
-class RAnchorGenerator:
+class AnchorGenerator:
     """Args:
         strides: 每层特征图相对原图的下采样倍数，例如 [4, 8, 16, 32, 64]
         ratios: 高宽比 h / w 的列表
@@ -87,7 +87,7 @@ class RAnchorGenerator:
         思考：ratio=0.5 时 anchor 是"扁"的还是"高"的？算出来验证一下。
         """
         # TODO(1)
-        raise NotImplementedError('RAnchorGenerator.gen_single_level_base_anchors')
+        raise NotImplementedError('AnchorGenerator.gen_single_level_base_anchors')
 
     def gen_base_anchors(self) -> List[torch.Tensor]:
         # 已完成：对每一层调用上面的函数
@@ -112,13 +112,13 @@ class RAnchorGenerator:
              一一对应的 [H*W*A]，应该怎样 permute？（答案在 2.3 RPN 练习里会用到）
         """
         # TODO(2) 注意 base_anchors 要 .to(device)
-        raise NotImplementedError('RAnchorGenerator.single_level_grid_priors')
+        raise NotImplementedError('AnchorGenerator.single_level_grid_priors')
 
     def grid_priors(self, featmap_sizes: List[Tuple[int, int]], device='cpu') -> List[torch.Tensor]:
         """所有层的 anchor，返回 list，第 l 项形状 [H_l * W_l * A, 4]。"""
         assert len(featmap_sizes) == self.num_levels
         # TODO(3) 对每层调用 single_level_grid_priors
-        raise NotImplementedError('RAnchorGenerator.grid_priors')
+        raise NotImplementedError('AnchorGenerator.grid_priors')
 
     def valid_flags(self, featmap_sizes: List[Tuple[int, int]], pad_shape: Tuple[int, int],
                     device='cpu') -> List[torch.Tensor]:

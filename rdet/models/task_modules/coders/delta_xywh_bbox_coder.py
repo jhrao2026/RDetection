@@ -37,7 +37,7 @@ from rdet.registry import TASK_UTILS
 
 
 @TASK_UTILS.register_module()
-class RDeltaXYWHBBoxCoder:
+class DeltaXYWHBBoxCoder:
 
     def __init__(self, target_means: Sequence[float] = (0., 0., 0., 0.),
                  target_stds: Sequence[float] = (1., 1., 1., 1.),
@@ -61,7 +61,7 @@ class RDeltaXYWHBBoxCoder:
         """
         assert bboxes.size(0) == gt_bboxes.size(0)
         # TODO(1)
-        raise NotImplementedError('RDeltaXYWHBBoxCoder.encode')
+        raise NotImplementedError('DeltaXYWHBBoxCoder.encode')
 
     def decode(self, bboxes: torch.Tensor, pred_bboxes: torch.Tensor,
                max_shape: Optional[Tuple[int, int]] = None,
@@ -87,7 +87,7 @@ class RDeltaXYWHBBoxCoder:
         """
         assert pred_bboxes.size(0) == bboxes.size(0)
         # TODO(2)
-        raise NotImplementedError('RDeltaXYWHBBoxCoder.decode')
+        raise NotImplementedError('DeltaXYWHBBoxCoder.decode')
 
 
 _ = math  # 练习 2 会用到 math.log；写完后删掉这一行

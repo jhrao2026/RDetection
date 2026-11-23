@@ -1,4 +1,4 @@
-"""Stage 2.6 RetinaNet（Focal Loss + RetinaHead + RSingleStageDetector）的验收测试。"""
+"""Stage 2.6 RetinaNet（Focal Loss + RetinaHead + SingleStageDetector）的验收测试。"""
 import copy
 import math
 import os.path as osp
@@ -9,17 +9,17 @@ torch = pytest.importorskip('torch')
 pytest.importorskip('torchvision')
 import torch.nn.functional as F  # noqa: E402
 
-from helpers import fpn_feats, mmdet_config, mmdet_scope, random_boxes, sum_loss  # noqa: E402
+from helpers import build_from_config, fpn_feats, mmdet_config, random_boxes, scope, sum_loss  # noqa: E402
 
-from rdet.models.dense_heads import RRetinaHead  # noqa: E402
+from rdet.models.dense_heads import RetinaHead  # noqa: E402
 from rdet.models.losses import sigmoid_focal_loss  # noqa: E402
 
 NUM_CLASSES = 4
 SCALES = [4.0, 5.039684199579493, 6.3496042078727974]
 STRIDES = (8, 16, 32, 64, 128)
-ANCHOR = dict(type='RAnchorGenerator', scales=SCALES, ratios=[0.5, 1.0, 2.0], strides=list(STRIDES))
-CODER = dict(type='RDeltaXYWHBBoxCoder', target_means=[0.] * 4, target_stds=[1.] * 4)
-TRAIN = dict(assigner=dict(type='RMaxIoUAssigner', pos_iou_thr=0.5, neg_iou_thr=0.4, min_pos_iou=0,
+ANCHOR = dict(type='AnchorGenerator', scales=SCALES, ratios=[0.5, 1.0, 2.0], strides=list(STRIDES))
+CODER = dict(type='DeltaXYWHBBoxCoder', target_means=[0.] * 4, target_stds=[1.] * 4)
+TRAIN = dict(assigner=dict(type='MaxIoUAssigner', pos_iou_thr=0.5, neg_iou_thr=0.4, min_pos_iou=0,
                            match_low_quality=True))
 TEST = dict(nms_pre=1000, min_bbox_size=0, score_thr=0.05, nms=dict(type='nms', iou_threshold=0.5),
             max_per_img=100)
@@ -61,7 +61,7 @@ def test_focal_loss_vs_mmdet():
 # ------------------------------------------------------------------ head
 def make_head():
     torch.manual_seed(0)
-    head = RRetinaHead(NUM_CLASSES, 256, 4, 256, ANCHOR, CODER, train_cfg=TRAIN, test_cfg=TEST)
+    head = RetinaHead(NUM_CLASSES, 256, 4, 256, ANCHOR, CODER, train_cfg=TRAIN, test_cfg=TEST)
     head.init_weights()
     return head
 
@@ -91,21 +91,21 @@ def test_head_loss_and_predict():
 
 def test_head_vs_mmdet():
     pytest.importorskip('mmdet.models')
-    from mmdet.models.dense_heads import RetinaHead
+    from mmdet.models.dense_heads import RetinaHead as MMDetRetinaHead
     from mmengine.config import ConfigDict
     from mmengine.structures import InstanceData
-    mmdet_scope()
-    ref = RetinaHead(
-        num_classes=NUM_CLASSES, in_channels=256, stacked_convs=4, feat_channels=256,
-        anchor_generator=dict(type='AnchorGenerator', octave_base_scale=4, scales_per_octave=3,
-                              ratios=[0.5, 1.0, 2.0], strides=list(STRIDES)),
-        bbox_coder=dict(type='DeltaXYWHBBoxCoder', target_means=[0.] * 4, target_stds=[1.] * 4),
-        loss_cls=dict(type='FocalLoss', use_sigmoid=True, gamma=2.0, alpha=0.25, loss_weight=1.0),
-        loss_bbox=dict(type='L1Loss', loss_weight=1.0),
-        train_cfg=ConfigDict(assigner=dict(type='MaxIoUAssigner', pos_iou_thr=0.5, neg_iou_thr=0.4,
-                                           min_pos_iou=0, ignore_iof_thr=-1),
-                             sampler=dict(type='PseudoSampler'), allowed_border=-1, pos_weight=-1, debug=False),
-        test_cfg=ConfigDict(TEST))
+    with scope('mmdet'):
+        ref = MMDetRetinaHead(
+            num_classes=NUM_CLASSES, in_channels=256, stacked_convs=4, feat_channels=256,
+            anchor_generator=dict(type='AnchorGenerator', octave_base_scale=4, scales_per_octave=3,
+                                  ratios=[0.5, 1.0, 2.0], strides=list(STRIDES)),
+            bbox_coder=dict(type='DeltaXYWHBBoxCoder', target_means=[0.] * 4, target_stds=[1.] * 4),
+            loss_cls=dict(type='FocalLoss', use_sigmoid=True, gamma=2.0, alpha=0.25, loss_weight=1.0),
+            loss_bbox=dict(type='L1Loss', loss_weight=1.0),
+            train_cfg=ConfigDict(assigner=dict(type='MaxIoUAssigner', pos_iou_thr=0.5, neg_iou_thr=0.4,
+                                               min_pos_iou=0, ignore_iof_thr=-1),
+                                 sampler=dict(type='PseudoSampler'), allowed_border=-1, pos_weight=-1, debug=False),
+            test_cfg=ConfigDict(TEST))
     mine = make_head()
     mine.load_state_dict(ref.state_dict())
     with torch.no_grad():   # 分类输出调 "尖" 一点，保证 predict 有足够多超过阈值的框
@@ -132,22 +132,13 @@ def test_head_vs_mmdet():
 # ------------------------------------------------------------------ detector（需要 mmdet）
 def test_detector_vs_mmdet():
     pytest.importorskip('mmdet.models')
-    from mmdet.registry import MODELS
-    from mmengine.config import Config
-    import rdet  # noqa: F401
     from test_faster_rcnn import _unpack, fake_batch
 
-    def build(path):
-        mmdet_scope()
-        cfg = Config.fromfile(path)
-        cfg.model.backbone.init_cfg = None
-        return MODELS.build(cfg.model)
-
     torch.manual_seed(0)
-    ref = build(mmdet_config('retinanet/retinanet_r50_fpn_1x_coco.py'))
+    ref = build_from_config(mmdet_config('retinanet/retinanet_r50_fpn_1x_coco.py'))
     with torch.no_grad():   # 初始 bias=-4.6 时所有分数都 < 0.05，没有检测结果可比；调大让结果非空
         ref.bbox_head.retina_cls.bias.fill_(-2.0)
-    mine = build(osp.join(osp.dirname(__file__), '..', 'configs', 'retinanet', 'rretinanet_r50_fpn_1x_coco.py'))
+    mine = build_from_config(osp.join(osp.dirname(__file__), '..', 'configs', 'retinanet', 'retinanet_r50_fpn_1x_coco.py'))
     mine.load_state_dict(ref.state_dict(), strict=True)
 
     mine.train(), ref.train()

@@ -1,7 +1,7 @@
-"""练习 2.5：RFasterRCNN —— 把所有组件组装成完整的两阶段检测器
+"""练习 2.5：FasterRCNN —— 把所有组件组装成完整的两阶段检测器
 
 ================================================================================
-这是 Stage 2 的终点：写完它，configs/faster_rcnn/rfaster-rcnn_r50_fpn_1x_coco.py 里
+这是 Stage 2 的终点：写完它，configs/faster_rcnn/faster-rcnn_r50_fpn_1x_coco.py 里
 **每一个模块都是你自己写的**，加载官方权重后 mAP 应该和官方完全一样（37.4）。
 
 继承 mmdet 的 BaseDetector（需要装 mmdet），它帮我们处理了：
@@ -26,7 +26,7 @@
 
 完成标准
     pytest tests/test_faster_rcnn.py   （与 mmdet 官方 FasterRCNN 同权重对比 loss 和检测结果）
-    最终：python tools/test.py configs/faster_rcnn/rfaster-rcnn_r50_fpn_1x_coco.py <官方权重> → mAP 37.4
+    最终：python tools/test.py configs/faster_rcnn/faster-rcnn_r50_fpn_1x_coco.py <官方权重> → mAP 37.4
 ================================================================================
 """
 
@@ -41,7 +41,7 @@ from rdet.registry import MODELS
 
 
 @MODELS.register_module()
-class RFasterRCNN(BaseDetector):
+class FasterRCNN(BaseDetector):
 
     def __init__(self, backbone: dict, neck: dict, rpn_head: dict, roi_head: dict,
                  train_cfg: dict = None, test_cfg: dict = None, data_preprocessor: dict = None,
@@ -56,12 +56,12 @@ class RFasterRCNN(BaseDetector):
         #   - roi_head：同理，用 train_cfg['rcnn'] 和 test_cfg['rcnn']
         #   提示：copy.deepcopy(rpn_head) 再 update，不要修改传入的配置
         # 思考：为什么 train_cfg / test_cfg 写在 detector 这一层，而不是直接写进各个 head 的配置里？
-        raise NotImplementedError('RFasterRCNN.__init__')
+        raise NotImplementedError('FasterRCNN.__init__')
 
     def extract_feat(self, batch_inputs: torch.Tensor):
         """练习 2：backbone → neck，返回 FPN 的 5 层特征。"""
         # TODO(2)
-        raise NotImplementedError('RFasterRCNN.extract_feat')
+        raise NotImplementedError('FasterRCNN.extract_feat')
 
     def loss(self, batch_inputs: torch.Tensor, batch_data_samples) -> dict:
         """练习 3：训练。
@@ -81,7 +81,7 @@ class RFasterRCNN(BaseDetector):
               原始 Faster R-CNN 论文用的是 4 步交替训练，为什么后来都改成了端到端？
         """
         # TODO(3)
-        raise NotImplementedError('RFasterRCNN.loss')
+        raise NotImplementedError('FasterRCNN.loss')
 
     def predict(self, batch_inputs: torch.Tensor, batch_data_samples, rescale: bool = True):
         """练习 4：推理。
@@ -93,7 +93,7 @@ class RFasterRCNN(BaseDetector):
         5. return self.add_pred_to_datasample(batch_data_samples, results_list)
         """
         # TODO(4)
-        raise NotImplementedError('RFasterRCNN.predict')
+        raise NotImplementedError('FasterRCNN.predict')
 
     def _forward(self, batch_inputs: torch.Tensor, batch_data_samples=None):
         """（已完成）mode='tensor' 时调用，只返回网络的原始输出，用于计算 FLOPs、导出模型等。"""
