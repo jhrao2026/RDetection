@@ -10,30 +10,74 @@
 
 ## 阶段
 
-### Stage 0：环境 + 跑通官方 + tools 练习（约 1 周）
-- 按 README 安装；先用 **mmdet 自带** 的 tools 跑通 `configs/faster_rcnn/faster-rcnn_r50_fpn_1x_coco.py` 的推理和 1 个 epoch 训练。
-- 再按 TODO 完成本仓库的练习版，用同样的命令跑通即为完成：
-  - [ ] `tools/train.py`
-  - [ ] `tools/dist_train.sh`
-  - [ ] `tools/test.py`
-  - [ ] `tools/dist_test.sh`
-  - [ ] `tools/misc/browse_dataset.py`
-- 作业：画出 `runner.train()` 的调用链：Config → Runner → build model / dataloader → train loop → Hooks。
+### Stage 0：环境 + 跑通官方（3–5 天，不写代码）
+目的：拿到"标准答案"。后面手写的每个组件都要和它逐层对齐，没有它就无法判断自己写得对不对。
+- [ ] 按 README 安装环境，`python -c "import mmdet, mmcv.ops"` 不报错
+- [ ] 下载官方 `faster-rcnn_r50_fpn_1x_coco` checkpoint，用 **mmdet 自带** 的 `tools/test.py` 复现 COCO val bbox mAP 37.4
+- [ ] 用 mmdet 自带的 `tools/train.py` 训 1 个 epoch（可以用 `--cfg-options train_cfg.max_epochs=1`）
+- [ ] 用 mmdet 自带的 `tools/misc/browse_dataset.py` 看一遍训练数据
+- [ ] 断点走一遍前向，把每一步的 tensor 形状填进 [01-faster-rcnn-dataflow.md](01-faster-rcnn-dataflow.md)
 
-### Stage 1：手写 mini_mm（约 1–2 周）
+### Stage 1：框架层（约 1–2 周）
+**mini_mm**（有单元测试）
 - [x] `mini_mm/registry.py`：仿 `mmengine/registry/registry.py`（已完成的示范，先读懂它）
 - [ ] `mini_mm/config.py`：练习 1–5，`_base_` 继承与字典合并（`pytest tests/test_mini_mm_config.py`）
 - [ ] `mini_mm/hooks.py`：练习 6–7，LoggerHook / CheckpointHook
 - [ ] `mini_mm/runner.py`：练习 8–12，parse_losses / Hook 排序 / 训练循环 / from_cfg（`pytest tests/test_mini_mm_runner.py`）
-- [ ] 用 mini_mm 训练 CIFAR-10 小分类网，顺便补齐 Dataset/DataLoader、autograd、优化器、AMP、DDP
-- 思考题：
-  - 为什么用 Registry 而不是直接 import？
-  - 为什么 `data_preprocessor` 要从模型里拆出来？
-  - 为什么 loss 写在 head 里而不是训练脚本里？
+- [ ] （可选）用 mini_mm 训练 CIFAR-10 小分类网，顺便补齐 Dataset/DataLoader、autograd、优化器、AMP、DDP
 
-### Stage 2：插件骨架（约 1 周）
-- 把 RetinaNet 的 head 复制到 `rdet/models/dense_heads/` 改名注册，训练结果应和原版一致，以此证明插件链路是通的。
-- 补齐检测基础：anchor、IoU、NMS、FPN、assigner/sampler、bbox coder、COCO mAP。
+**tools**（用自己写的版本复现 Stage 0 的结果即为完成）
+- [ ] `tools/train.py`
+- [ ] `tools/dist_train.sh`
+- [ ] `tools/test.py`
+- [ ] `tools/dist_test.sh`
+- [ ] `tools/misc/browse_dataset.py`
+
+思考题：
+- 为什么用 Registry 而不是直接 import？
+- 为什么 `data_preprocessor` 要从模型里拆出来？
+- 为什么 loss 写在 head 里而不是训练脚本里？
+
+### Stage 2：亲手实现 Faster R-CNN（约 3–4 周）
+把官方配置里的每一个模块都换成自己写的版本，最后加载官方权重得到同样的 mAP。
+
+设计约束：
+- 注册名加 `R` 前缀（`RResNet`、`RFPN` ...），避免和 mmdet 自带模块重名；
+- **子模块 / 参数名与 mmdet 完全一致**，官方 checkpoint 才能直接加载 —— 这是最强的正确性检验；
+- 测试分两层：A 层只依赖 torch / torchvision，B 层（`*_vs_mmdet`）装了 mmdet 才运行，和 mmdet 的实现逐元素对比。
+
+**2.1 基础工具**（`pytest tests/test_bbox_utils.py`）
+- [ ] `rdet/structures/bbox.py`：IoU 矩阵 `bbox_overlaps`
+- [ ] `rdet/models/layers/nms.py`：纯 Python 的 `nms` / `batched_nms`
+- [ ] `rdet/models/task_modules/prior_generators/anchor_generator.py`：`RAnchorGenerator`
+- [ ] `rdet/models/task_modules/coders/delta_xywh_bbox_coder.py`：`RDeltaXYWHBBoxCoder`
+- [ ] `rdet/models/task_modules/assigners/max_iou_assigner.py`：`RMaxIoUAssigner`
+- [ ] `rdet/models/task_modules/samplers/random_sampler.py`：`RRandomSampler`
+
+**2.2 Backbone & Neck**（`pytest tests/test_resnet.py tests/test_fpn.py`）
+- [ ] `rdet/models/backbones/resnet.py`：`RResNet`（和 torchvision resnet50 输出一致）
+- [ ] `rdet/models/necks/fpn.py`：`RFPN`（和 torchvision / mmdet FPN 输出一致）
+
+**2.3 RPN Head** —— 待发布
+- [ ] `rdet/models/dense_heads/rpn_head.py`：forward / loss / 生成 proposals
+
+**2.4 RoI Head** —— 待发布
+- [ ] RoI Extractor（按面积把 RoI 分配到 FPN 层 + RoIAlign）
+- [ ] BBox Head（Shared2FC + 分类 / 回归分支）
+- [ ] StandardRoIHead（串起 assigner / sampler / extractor / bbox head）
+
+**2.5 Detector + 配置**（最终验收）—— 待发布
+- [ ] `rdet/models/detectors/faster_rcnn.py`
+- [ ] `configs/faster_rcnn/rfaster-rcnn_r50_fpn_1x_coco.py`：加载官方权重 mAP = 37.4；多卡从头训练 1x，差距 ≤ 0.3
+
+**2.6 RetinaNet（短练习，衔接 YOLO）** —— 待发布
+- [ ] Focal Loss + RetinaHead，复用 2.1 / 2.2 的组件，对比 one-stage 与 two-stage
+
+思考题：
+- 为什么 bbox 回归预测 delta，而不是绝对坐标？
+- 为什么 RPN 正负样本 1:1，而 RoI head 是 1:3？
+- 为什么 FPN 的 P6 直接 max pool，而 RetinaNet 的 P6 / P7 要用卷积？
+- 为什么 RoI 要按面积分配到不同的 FPN 层？
 
 ### Stage 3：YOLOv8 → YOLO11（约 2–3 周）
 - 参考 mmyolo 的 YOLOv8：CSPDarknet / C2f、PAFPN、解耦头、DFL、TaskAlignedAssigner。
@@ -55,7 +99,7 @@
 ### Stage 7：Co-DETR（约 3 周，可选）
 - 参考 mmdet `projects/CO-DETR`，学习多辅助头协同训练和 `projects/` 插件的组织方式。
 
-> 顺序说明：RT-DETR 的去噪训练和 query selection 都来自 DINO，所以先做 DINO 再做 RT-DETR。
+> 顺序说明：Stage 3 的 YOLO 会直接复用 Stage 2 的 IoU / NMS / assigner 思路和 browse_dataset 调试方式。RT-DETR 的去噪训练和 query selection 都来自 DINO，所以先做 DINO 再做 RT-DETR。
 
 ## 每个模型的统一流程
 1. 读论文，画结构图，写进 `docs/notes/`
